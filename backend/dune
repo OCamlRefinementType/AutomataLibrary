@@ -1,0 +1,11 @@
+(library
+ (public_name AutomataLibrary.backend)
+ (name backend)
+ (wrapped true)
+ (modules
+   automata
+   backend
+ )
+ (preprocess
+  (pps ppx_optcomp ppx_compare ppx_sexp_conv ppx_here))
+ (libraries fa))

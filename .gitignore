@@ -1,3 +1,12 @@
+data/*
+*.DS_Store
+*.png
+*.dump
+*.log
+*client.p
+*PCheckerOutput*
+*PGenerated*
+*.dot
 *.annot
 *.cmo
 *.cma
