@@ -1,2 +1,0 @@
-include Automata
-include Plang

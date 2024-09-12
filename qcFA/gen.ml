@@ -1,4 +1,5 @@
-open Syntax
+open Fa
+open Zutils
 open CharAutomata
 open QCheck.Gen
 

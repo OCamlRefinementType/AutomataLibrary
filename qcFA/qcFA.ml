@@ -1,5 +1,6 @@
 open Gen
-open Syntax
+open Fa
+open Zutils
 open CharAutomata
 
 type fa = DFA of dfa | NFA of nfa | REGEX of (string * Str.regexp)
