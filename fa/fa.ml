@@ -220,3 +220,5 @@ let symbolic_dfa_to_event_name_dfa (dfa : SFA.dfa) =
     { start = StateSet.singleton dfa.start; finals = dfa.finals; next }
   in
   normalize_dfa @@ determinize nfa
+
+module RegexTypecheck = Normal_regex_typing
