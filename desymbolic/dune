@@ -1,0 +1,12 @@
+(library
+ (public_name AutomataLibrary.desymbolic)
+ (name desymbolic)
+ (wrapped true)
+ (libraries fa core compiler-libs)
+ (modules
+   head
+   mapping
+   desymbolic
+ )
+ (preprocess (pps ppx_here))
+)

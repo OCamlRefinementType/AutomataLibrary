@@ -1,0 +1,9 @@
+(library
+ (name AutomataLibrary)
+ (public_name AutomataLibrary)
+ (wrapped true)
+ (modules
+   AutomataLibrary
+ )
+ (libraries fa qcFa desymbolic)
+)

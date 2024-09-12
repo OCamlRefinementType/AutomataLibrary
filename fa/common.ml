@@ -1,3 +1,5 @@
+open Zutils
+
 type state = int
 
 module StateSet = Set.Make (Int)
@@ -95,4 +97,32 @@ module MakeC (C : CHARAC) = struct
   let c2id { __c2id; _ } = Hashtbl.find __c2id
 
   include C
+end
+
+module CharC = struct
+  include Char
+
+  let layout x = spf "%c" x
+  let delimit_cotexnt_char (_, c) = [ c ]
+end
+
+module StringC = struct
+  include String
+
+  let layout x = x
+  let delimit_cotexnt_char (_, c) = [ c ]
+end
+
+module Int64C = struct
+  include Int64
+
+  let layout = to_string
+  let delimit_cotexnt_char (_, c) = [ c ]
+end
+
+module DesymLabel = struct
+  type t = string * int [@@deriving eq, ord]
+
+  let layout (op, id) = op ^ ":" ^ string_of_int id
+  let delimit_cotexnt_char (_, c) = [ c ]
 end
