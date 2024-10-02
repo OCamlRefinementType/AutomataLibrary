@@ -8,7 +8,7 @@ open Common
 
 let var_or_c_of_expr expr =
   match expr.pexp_desc with
-  | Pexp_ident id -> RVar (longid_to_id id) #: None
+  | Pexp_ident id -> RVar (longid_to_id id) #: Nt.Ty_unknown
   | _ -> RConst (expr_to_constant expr)
 
 let of_expr_aux label_of_expr expr =
@@ -42,7 +42,7 @@ let of_expr_aux label_of_expr expr =
         | Some "starA", [ e1 ] -> StarA (aux e1)
         | Some "not", [ e1 ] -> Extension (ComplementA (aux e1))
         | Some "mu", _ ->
-            _failatwith [%here] "the recursive automata are disallowed"
+            _die_with [%here] "the recursive automata are disallowed"
         | Some "||", [ a; b ] -> LorA (aux a, aux b)
         | Some "-", [ a; b ] -> SyntaxSugar (SetMinusA (aux a, aux b))
         | Some "&&", [ a; b ] -> LandA (aux a, aux b)
@@ -62,7 +62,7 @@ let of_expr_aux label_of_expr expr =
             | AVar x -> RExpr (Repeat (x.x, r))
             | AC (I i) -> RepeatN (i, r)
             | _ ->
-                _failatwith [%here]
+                _die_with [%here]
                 @@ spf "unknown repeat %s" (Pprintast.string_of_expression expr)
             )
         | _, args ->
@@ -71,7 +71,7 @@ let of_expr_aux label_of_expr expr =
             let mk_apply func arg = RExpr (RApp { func; arg }) in
             List.fold_left mk_apply func args)
     | Pexp_let (_, [ v ], body) ->
-        let lhs = (id_of_pattern v.pvb_pat) #: None in
+        let lhs = (id_of_pattern v.pvb_pat) #: Nt.Ty_unknown in
         let rhs = var_or_c_of_expr v.pvb_expr in
         RExpr (RLet { lhs; rhs; body = aux body })
     | Pexp_sequence (a, b) -> SeqA (aux a, aux b)
@@ -81,7 +81,7 @@ let of_expr_aux label_of_expr expr =
         | "epsilonA" -> EpsilonA
         | "emptyA" -> EmptyA
         | "anyA" -> Extension AnyA
-        | _ -> RExpr (RVar id #: None))
+        | _ -> RExpr (RVar id #: Nt.Ty_unknown))
     | Pexp_constant _ | Pexp_array _ -> RExpr (RConst (expr_to_constant expr))
     | _ -> Atomic (label_of_expr expr)
   in
