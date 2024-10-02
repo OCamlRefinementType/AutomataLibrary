@@ -222,3 +222,6 @@ let symbolic_dfa_to_event_name_dfa (dfa : SFA.dfa) =
   normalize_dfa @@ determinize nfa
 
 module RegexTypecheck = Normal_regex_typing
+
+let bi_symbolic_regex_check = Normal_regex_typing.bi_symbolic_regex_check
+let bi_str_regex_check = Normal_regex_typing.bi_str_regex_check
