@@ -225,3 +225,4 @@ module RegexTypecheck = Normal_regex_typing
 
 let bi_symbolic_regex_check = Normal_regex_typing.bi_symbolic_regex_check
 let bi_str_regex_check = Normal_regex_typing.bi_str_regex_check
+let mk_regex_ctx = Normal_regex_typing.mk_regex_ctx
