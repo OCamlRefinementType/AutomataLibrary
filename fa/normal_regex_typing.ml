@@ -139,3 +139,6 @@ let bi_symbolic_regex_check = bi_regex_check bi_sevent_check
 
 let bi_str_regex_check (ctx : regex_ctx) regex =
   bi_regex_check (fun _ x -> x) ctx regex
+
+let mk_regex_ctx (event_tyctx, tyctx) =
+  { event_tyctx; regex_tyctx = emp; tyctx }
