@@ -5,6 +5,10 @@ open Prop
 include RegexTree
 (** ast_builder *)
 
+let smart_negate = function
+  | Extension (ComplementA r) -> r
+  | _ as r -> Extension (ComplementA r)
+
 let mk_reg_func args r =
   List.fold_right
     (fun arg body ->
