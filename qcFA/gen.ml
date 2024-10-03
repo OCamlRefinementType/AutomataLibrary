@@ -49,7 +49,7 @@ let raw_regex_two_arg_gen g1 g2 =
   frequency
     [
       (1, map2 (fun r1 r2 -> Alt (r1, r2)) g1 g2);
-      (1, map2 (fun r1 r2 -> Seq (r1, r2)) g1 g2);
+      (1, map2 (fun r1 r2 -> Seq [ r1; r2 ]) g1 g2);
       (1, map2 (fun r1 r2 -> Inters (r1, r2)) g1 g2);
     ]
 
@@ -70,7 +70,7 @@ let basic_raw_regex_gen =
                      (self (n / 2)) );
                  ( 1,
                    map2
-                     (fun r1 r2 -> Seq (r1, r2))
+                     (fun r1 r2 -> Seq [ r1; r2 ])
                      (self (n / 2))
                      (self (n / 2)) );
                ])
@@ -100,20 +100,23 @@ let string_gen_from_regex (r : raw_regex) =
         | [] -> pure None
         | l -> map (fun c -> Some [ c ]) (oneofl l))
     | Alt (r1, r2) -> frequency [ (1, aux r1); (1, aux r2) ]
-    | Seq (r1, r2) ->
-        map2
-          (fun r1 r2 ->
-            match (r1, r2) with
-            | Some r1, Some r2 -> Some (r1 @ r2)
-            | _, _ -> None)
-          (aux r1) (aux r2)
+    | Seq rs ->
+        let f r1 r2 =
+          map2
+            (fun r1 r2 ->
+              match (r1, r2) with
+              | Some r1, Some r2 -> Some (r1 @ r2)
+              | _, _ -> None)
+            r1 r2
+        in
+        List.left_reduce [%here] f @@ List.map aux rs
     | Star r ->
         frequency
           [
             (1, pure None);
             (1, aux r);
-            (1, aux (Seq (r, r)));
-            (1, aux (Seq (Seq (r, r), r)));
+            (1, aux (Seq [ r; r ]));
+            (1, aux (Seq [ r; r; r ]));
           ]
     | Inters _ | Comple _ -> _die [%here]
   in
