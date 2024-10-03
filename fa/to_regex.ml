@@ -38,6 +38,15 @@ let of_expr_aux label_of_expr expr =
         in
         RExpr (QFRegex { qv; body })
     | Pexp_apply (func, args) -> (
+        let () =
+          Printf.printf "%s\n"
+          @@ layout_option (fun x -> x) (id_of_expr_opt func)
+        in
+        let () =
+          Printf.printf "%s\n"
+          @@ List.split_by_comma Pprintast.string_of_expression
+               (List.map snd args)
+        in
         match (id_of_expr_opt func, List.map snd args) with
         | Some "starA", [ e1 ] -> StarA (aux e1)
         | Some "not", [ e1 ] -> Extension (ComplementA (aux e1))
