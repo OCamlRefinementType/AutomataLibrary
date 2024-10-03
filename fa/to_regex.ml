@@ -99,6 +99,7 @@ let of_expr_aux label_of_expr expr =
         | "epsilonA" -> EpsilonA
         | "emptyA" -> EmptyA
         | "anyA" -> Extension AnyA
+        | "allA" -> mk_all
         | _ -> RExpr (RVar id #: Nt.Ty_unknown))
     | Pexp_constant _ | Pexp_array _ -> RExpr (RConst (expr_to_constant expr))
     | _ -> Atomic (label_of_expr expr)
