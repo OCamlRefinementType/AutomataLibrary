@@ -141,7 +141,7 @@ let rec pprint_aux layout_ty layout_label = function
           (p_pprint layout_ty layout_label a2),
         false )
   | SeqA rs ->
-      (List.split_by "; " (p_pprint layout_ty layout_label) rs, false)
+      (List.split_by " " (p_pprint layout_ty layout_label) rs, false)
       (* ( spf "%s;%s" *)
       (*     (p_pprint layout_ty layout_label a1) *)
       (*     (p_pprint layout_ty layout_label a2), *)
