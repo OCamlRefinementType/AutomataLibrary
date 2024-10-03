@@ -23,7 +23,7 @@ let rec map_label_in_regex (f : 'a -> 'b) (regex : ('t, 'a) regex) :
     | MultiAtomic cs -> MultiAtomic (List.map f cs)
     | LorA (r1, r2) -> LorA (aux r1, aux r2)
     | LandA (r1, r2) -> LandA (aux r1, aux r2)
-    | SeqA (r1, r2) -> SeqA (aux r1, aux r2)
+    | SeqA rs -> SeqA (List.map aux rs)
     | StarA r -> StarA (aux r)
     | DComplementA { atoms; body } ->
         DComplementA { atoms = List.map f atoms; body = aux body }
@@ -84,7 +84,7 @@ let rec normalize_regex (regex : ('t, 'a) regex) : ('t, 'b) regex =
     | MultiAtomic _ -> regex
     | LorA (r1, r2) -> LorA (aux r1, aux r2)
     | LandA (r1, r2) -> LandA (aux r1, aux r2)
-    | SeqA (r1, r2) -> SeqA (aux r1, aux r2)
+    | SeqA rs -> SeqA (List.map aux rs)
     | StarA r -> StarA (aux r)
     | DComplementA { atoms; body } -> DComplementA { atoms; body = aux body }
     | RepeatN (n, r) -> RepeatN (n, aux r)
@@ -150,7 +150,7 @@ let rec subst_regex regex name (m : ('t, 't sevent) regex_expr) =
     | MultiAtomic ses -> MultiAtomic (List.map (_subst_se name m) ses)
     | LorA (r1, r2) -> LorA (aux r1, aux r2)
     | LandA (r1, r2) -> LandA (aux r1, aux r2)
-    | SeqA (r1, r2) -> SeqA (aux r1, aux r2)
+    | SeqA rs -> SeqA (List.map aux rs)
     | StarA r -> StarA (aux r)
     | DComplementA { atoms; body } ->
         DComplementA
@@ -258,7 +258,7 @@ let rec desugar ctx regex =
       | EmptyA, _ | _, EmptyA -> EmptyA
       | r1, r2 -> LandA (r1, r2))
   | RepeatN (n, r) -> RepeatN (n, desugar ctx r)
-  | SeqA (r1, r2) -> SeqA (desugar ctx r1, desugar ctx r2)
+  | SeqA rs -> SeqA (List.map (desugar ctx) rs)
   | StarA r -> StarA (desugar ctx r)
   | DComplementA { atoms; body } ->
       DComplementA { atoms; body = desugar ctx body }
@@ -290,7 +290,8 @@ let delimit_context (delimit_cotexnt_char : 'a list option * 'a -> 'a list)
     | RExpr _ | SyntaxSugar _ -> _die_with [%here] "should be eliminated"
     | Extension (ComplementA EmptyA) -> StarA (MultiAtomic (force_ctx ctx))
     | Extension (ComplementA EpsilonA) ->
-        SeqA (MultiAtomic (force_ctx ctx), StarA (MultiAtomic (force_ctx ctx)))
+        SeqA
+          [ MultiAtomic (force_ctx ctx); StarA (MultiAtomic (force_ctx ctx)) ]
     | Extension (ComplementA r) ->
         DComplementA { atoms = force_ctx ctx; body = aux ctx r }
     | Extension AnyA -> MultiAtomic (force_ctx ctx)
@@ -309,7 +310,7 @@ let delimit_context (delimit_cotexnt_char : 'a list option * 'a -> 'a list)
         DComplementA { atoms; body = aux (Some atoms) body }
     | LorA (r1, r2) -> LorA (aux ctx r1, aux ctx r2)
     | LandA (r1, r2) -> LandA (aux ctx r1, aux ctx r2)
-    | SeqA (r1, r2) -> SeqA (aux ctx r1, aux ctx r2)
+    | SeqA rs -> SeqA (List.map (aux ctx) rs)
     | StarA r -> StarA (aux ctx r)
   in
   aux ctx regex
@@ -325,7 +326,7 @@ let gather_regex regex =
     | Atomic se -> gather_se m se
     | LorA (t1, t2) -> aux t1 @@ aux t2 m
     | LandA (t1, t2) -> aux t1 @@ aux t2 m
-    | SeqA (t1, t2) -> aux t1 @@ aux t2 m
+    | SeqA rs -> List.fold_right aux rs m
     | StarA t -> aux t m
     | MultiAtomic se -> List.fold_left gather_se m se
     | DComplementA { atoms; body } ->
@@ -409,10 +410,13 @@ let simp_regex (eq : 'a -> 'a -> bool) (regex : ('t, 'a) regex) =
         | MultiAtomic r1, MultiAtomic r2 ->
             aux (MultiAtomic (List.interset eq r1 r2))
         | r1, r2 -> LandA (r1, r2))
-    | SeqA (r1, r2) -> (
-        match (aux r1, aux r2) with
-        | EpsilonA, r | r, EpsilonA -> r
-        | r1, r2 -> SeqA (r1, r2))
+    | SeqA rs -> (
+        match
+          List.filter (function EpsilonA -> false | _ -> true)
+          @@ List.map aux rs
+        with
+        | [] -> EpsilonA
+        | rs -> SeqA rs)
     | StarA r -> (
         match aux r with
         | EmptyA -> EpsilonA
@@ -423,7 +427,7 @@ let simp_regex (eq : 'a -> 'a -> bool) (regex : ('t, 'a) regex) =
         let any_r = mk_multiatom atoms in
         match aux body with
         | EmptyA -> StarA any_r
-        | EpsilonA -> LorA (any_r, SeqA (any_r, StarA any_r))
+        | EpsilonA -> LorA (any_r, SeqA [ any_r; StarA any_r ])
         | body -> DComplementA { atoms; body })
   in
   aux regex

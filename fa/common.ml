@@ -39,7 +39,7 @@ module type FINITE_AUTOMATA = sig
     | Alt : raw_regex * raw_regex -> raw_regex
     | Inters : raw_regex * raw_regex -> raw_regex
     | Comple : CharSet.t * raw_regex -> raw_regex
-    | Seq : raw_regex * raw_regex -> raw_regex
+    | Seq : raw_regex list -> raw_regex
     | Star : raw_regex -> raw_regex
 
   type nfa = {

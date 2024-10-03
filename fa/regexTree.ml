@@ -19,7 +19,7 @@ type ('t, 'a) regex =
   | Atomic of 'a
   | LorA of ('t, 'a) regex * ('t, 'a) regex
   | LandA of ('t, 'a) regex * ('t, 'a) regex
-  | SeqA of ('t, 'a) regex * ('t, 'a) regex
+  | SeqA of ('t, 'a) regex list
   | StarA of ('t, 'a) regex
   | DComplementA of { atoms : 'a list; body : ('t, 'a) regex }
   | MultiAtomic of 'a list
@@ -88,7 +88,7 @@ let rec map_label_in_regex (f : 'a -> 'b) (regex : ('t, 'a) regex) :
     | MultiAtomic cs -> MultiAtomic (List.map f cs)
     | LorA (r1, r2) -> LorA (aux r1, aux r2)
     | LandA (r1, r2) -> LandA (aux r1, aux r2)
-    | SeqA (r1, r2) -> SeqA (aux r1, aux r2)
+    | SeqA rs -> SeqA (List.map aux rs)
     | StarA r -> StarA (aux r)
     | DComplementA { atoms; body } ->
         DComplementA { atoms = List.map f atoms; body = aux body }
@@ -149,7 +149,7 @@ let rec normalize_regex (regex : ('t, 'a) regex) : ('t, 'b) regex =
     | MultiAtomic _ -> regex
     | LorA (r1, r2) -> LorA (aux r1, aux r2)
     | LandA (r1, r2) -> LandA (aux r1, aux r2)
-    | SeqA (r1, r2) -> SeqA (aux r1, aux r2)
+    | SeqA rs -> SeqA (List.map aux rs)
     | StarA r -> StarA (aux r)
     | DComplementA { atoms; body } -> DComplementA { atoms; body = aux body }
     | RepeatN (n, r) -> RepeatN (n, aux r)
@@ -187,3 +187,17 @@ and normalize_regex_expr (regex : ('t, 'a) regex_expr) : ('t, 'b) regex_expr =
         RLet { lhs; rhs = aux rhs; body = normalize_regex body }
   in
   aux regex
+
+(** aux *)
+
+let mk_all = StarA (Extension AnyA)
+
+let mk_union_regex l =
+  match l with
+  | [] -> EmptyA
+  | _ -> List.left_reduce [%here] (fun x y -> LorA (x, y)) l
+
+let mk_inter_regex l =
+  match l with
+  | [] -> mk_all
+  | _ -> List.left_reduce [%here] (fun x y -> LorA (x, y)) l

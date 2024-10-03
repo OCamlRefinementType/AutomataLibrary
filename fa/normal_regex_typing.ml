@@ -30,7 +30,7 @@ let bi_regex_check (label_check : regex_ctx -> 'a -> 'b) (ctx : regex_ctx)
           | MultiAtomic se -> MultiAtomic (List.map (label_check ctx) se)
           | LorA (t1, t2) -> LorA (aux ctx t1, aux ctx t2)
           | LandA (t1, t2) -> LandA (aux ctx t1, aux ctx t2)
-          | SeqA (t1, t2) -> SeqA (aux ctx t1, aux ctx t2)
+          | SeqA rs -> SeqA (List.map (aux ctx) rs)
           | StarA t -> StarA (aux ctx t)
           | DComplementA { atoms; body } ->
               DComplementA

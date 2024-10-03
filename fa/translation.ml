@@ -33,7 +33,7 @@ module MakeAutomata (C : CHARAC) = struct
     | Alt : raw_regex * raw_regex -> raw_regex
     | Inters : raw_regex * raw_regex -> raw_regex
     | Comple : CharSet.t * raw_regex -> raw_regex
-    | Seq : raw_regex * raw_regex -> raw_regex
+    | Seq : raw_regex list -> raw_regex
     | Star : raw_regex -> raw_regex
 
   let raw_regex_to_str_regex r =
@@ -47,7 +47,7 @@ module MakeAutomata (C : CHARAC) = struct
       | Inters (r1, r2) -> par @@ spf "%s&%s" (aux r1) (aux r2)
       | Comple (cs, r2) ->
           par @@ spf "%s-%s" (aux (Star (MultiChar cs))) (aux r2)
-      | Seq (r1, r2) -> spf "%s%s" (aux r1) (aux r2)
+      | Seq rs -> List.split_by "" aux rs
       | Star r -> spf "%s*" @@ par (aux r)
     in
     "^" ^ aux r ^ "$"
@@ -63,7 +63,7 @@ module MakeAutomata (C : CHARAC) = struct
       | Inters (r1, r2) -> par @@ spf "%s & %s" (aux r1) (aux r2)
       | Comple (cs, r2) ->
           par @@ spf "%s - %s" (aux (Star (MultiChar cs))) (aux r2)
-      | Seq (r1, r2) -> spf "%s%s" (aux r1) (aux r2)
+      | Seq rs -> List.split_by "" aux rs
       | Star r -> spf "%s*" @@ par (aux r)
     in
     aux r
@@ -435,12 +435,10 @@ module MakeAutomata (C : CHARAC) = struct
           match compile_raw_regex_to_eps_nfa r with
           | None -> compile_raw_regex_to_eps_nfa (Star (MultiChar cs))
           | Some r -> Some (complement_eps_nfa cs r))
-      | Seq (r1, r2) -> (
-          match
-            (compile_raw_regex_to_eps_nfa r1, compile_raw_regex_to_eps_nfa r2)
-          with
-          | None, _ | _, None -> None
-          | Some r1, Some r2 -> Some (concat_eps_nfa r1 r2))
+      | Seq rs ->
+          let rs' = List.filter_map compile_raw_regex_to_eps_nfa rs in
+          if List.length rs' < List.length rs then None
+          else Some (List.left_reduce [%here] concat_eps_nfa rs')
       | Star r -> (
           match compile_raw_regex_to_eps_nfa r with
           | None -> Some eps_lit_eps_nfa
@@ -460,17 +458,22 @@ module MakeAutomata (C : CHARAC) = struct
     | None -> emp_lit_dfa
     | Some r -> eps_determinize r
 
-  let seq l r = match (l, r) with Eps, s | s, Eps -> s | l, r -> Seq (l, r)
+  (* let seq l r = match (l, r) with Eps, s | s, Eps -> s | l, r -> Seq (l, r) *)
+  let seq l =
+    let l = List.filter (function Eps -> false | _ -> true) l in
+    match l with [] -> Eps | _ -> Seq l
 
-  let mk_repeat (n, r) =
-    let rec aux (n, r) =
-      match n with
-      | 0 -> Eps
-      | 1 -> r
-      | _ when n > 1 -> seq r (aux (n - 1, r))
-      | _ -> _die_with [%here] "invalid repeat"
-    in
-    aux (n, r)
+  let mk_repeat (n, r) = seq (List.init n (fun _ -> r))
+  (* match n with *)
+  (* | 0 ->  *)
+  (* let rec aux (n, r) = *)
+  (*   match n with *)
+  (*   | 0 -> Eps *)
+  (*   | 1 -> r *)
+  (*   | _ when n > 1 -> seq r (aux (n - 1, r)) *)
+  (*   | _ -> _die_with [%here] "invalid repeat" *)
+  (* in *)
+  (* aux (n, r) *)
 
   let regex_to_raw (regex : ('t, C.t) regex) : raw_regex =
     (* let regex = Regex.to_nnf regex in *)
@@ -485,7 +488,7 @@ module MakeAutomata (C : CHARAC) = struct
       | EpsilonA -> Eps
       | Atomic c -> MultiChar (CharSet.singleton c)
       | LorA (r1, r2) -> Alt (aux r1, aux r2)
-      | SeqA (r1, r2) -> Seq (aux r1, aux r2)
+      | SeqA rs -> Seq (List.map aux rs)
       | StarA r -> Star (aux r)
     in
     let res = aux regex in

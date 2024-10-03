@@ -78,7 +78,7 @@ let partial_evaluate_regex global_tab regex =
              ses)
     | LorA (t1, t2) -> LorA (aux t1, aux t2)
     | LandA (t1, t2) -> LandA (aux t1, aux t2)
-    | SeqA (t1, t2) -> SeqA (aux t1, aux t2)
+    | SeqA rs -> SeqA (List.map aux rs)
     | StarA t -> StarA (aux t)
     | DComplementA { atoms; body } -> DComplementA { atoms; body = aux body }
   in
@@ -112,7 +112,7 @@ let desymbolic_local dts regex =
         labels_to_multiatomic @@ List.concat_map (desymbolic_sevent dts) se
     | LorA (t1, t2) -> LorA (aux t1, aux t2)
     | LandA (t1, t2) -> LandA (aux t1, aux t2)
-    | SeqA (t1, t2) -> SeqA (aux t1, aux t2)
+    | SeqA rs -> SeqA (List.map aux rs)
     | StarA t -> StarA (aux t)
     | DComplementA { atoms; body } ->
         let atoms =

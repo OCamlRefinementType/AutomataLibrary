@@ -55,6 +55,15 @@ let of_expr_aux label_of_expr expr =
         | Some "range", [ a ] ->
             let atoms = parse_labels a in
             MultiAtomic atoms
+        | Some "parallel", [ a ] ->
+            let atoms = parse_labels a in
+            let interleaving = List.permutation atoms in
+            let mk l =
+              SeqA (mk_all :: List.concat_map (fun x -> [ Atomic x; mk_all ]) l)
+            in
+            let interleaving = List.map mk interleaving in
+            mk_union_regex interleaving
+            (* mk_union_regex interleaving *)
         | Some "repeat", [ a; b ] -> (
             let lit = lit_of_expr a in
             let r = aux b in
@@ -74,7 +83,7 @@ let of_expr_aux label_of_expr expr =
         let lhs = (id_of_pattern v.pvb_pat) #: Nt.Ty_unknown in
         let rhs = var_or_c_of_expr v.pvb_expr in
         RExpr (RLet { lhs; rhs; body = aux body })
-    | Pexp_sequence (a, b) -> SeqA (aux a, aux b)
+    | Pexp_sequence _ -> SeqA (parse_seq expr)
     | Pexp_ident id -> (
         let id = longid_to_id id in
         match id with
@@ -84,6 +93,12 @@ let of_expr_aux label_of_expr expr =
         | _ -> RExpr (RVar id #: Nt.Ty_unknown))
     | Pexp_constant _ | Pexp_array _ -> RExpr (RConst (expr_to_constant expr))
     | _ -> Atomic (label_of_expr expr)
+  and parse_seq expr =
+    match expr.pexp_desc with
+    | Pexp_sequence (a, b) ->
+        let l1, l2 = map2 parse_seq (a, b) in
+        l1 @ l2
+    | _ -> [ aux expr ]
   in
   aux expr
 
@@ -115,11 +130,12 @@ let rec pprint_aux layout_ty layout_label = function
           "∩"
           (p_pprint layout_ty layout_label a2),
         false )
-  | SeqA (a1, a2) ->
-      ( spf "%s;%s"
-          (p_pprint layout_ty layout_label a1)
-          (p_pprint layout_ty layout_label a2),
-        false )
+  | SeqA rs ->
+      (List.split_by "; " (p_pprint layout_ty layout_label) rs, false)
+      (* ( spf "%s;%s" *)
+      (*     (p_pprint layout_ty layout_label a1) *)
+      (*     (p_pprint layout_ty layout_label a2), *)
+      (*   false ) *)
   | StarA a -> (spf "%s*" (p_pprint layout_ty layout_label a), true)
   | DComplementA { atoms; body } ->
       ( spf "Ctx[%s]{%sᶜ}"
@@ -215,7 +231,7 @@ let rec locally_rename ctx regex =
   | MultiAtomic atoms -> MultiAtomic (List.map (locally_rename_se ctx) atoms)
   | LorA (a1, a2) -> LorA (locally_rename ctx a1, locally_rename ctx a2)
   | LandA (a1, a2) -> LandA (locally_rename ctx a1, locally_rename ctx a2)
-  | SeqA (a1, a2) -> SeqA (locally_rename ctx a1, locally_rename ctx a2)
+  | SeqA rs -> SeqA (List.map (locally_rename ctx) rs)
   | StarA a -> StarA (locally_rename ctx a)
   | DComplementA { atoms; body } ->
       DComplementA
