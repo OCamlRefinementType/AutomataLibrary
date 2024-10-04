@@ -469,7 +469,11 @@ module MakeAutomata (C : CHARAC) = struct
     else Seq l
 
   let alt a b =
-    match (a, b) with Empty, _ -> b | _, Empty -> a | _, _ -> Alt (a, b)
+    match (a, b) with
+    | Empty, _ -> b
+    | _, Empty -> a
+    | MultiChar c1, MultiChar c2 -> MultiChar (CharSet.union c1 c2)
+    | _, _ -> Alt (a, b)
 
   let mk_repeat (n, r) = seq (List.init n (fun _ -> r))
   (* match n with *)
