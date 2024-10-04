@@ -26,15 +26,7 @@ module MakeAutomata (C : CHARAC) = struct
   module CharSet = Set.Make (C)
   open Zdatatype
 
-  type raw_regex =
-    | Empty : raw_regex (* L = { } *)
-    | Eps : raw_regex (* L = {ε} *)
-    | MultiChar : CharSet.t -> raw_regex
-    | Alt : raw_regex * raw_regex -> raw_regex
-    | Inters : raw_regex * raw_regex -> raw_regex
-    | Comple : CharSet.t * raw_regex -> raw_regex
-    | Seq : raw_regex list -> raw_regex
-    | Star : raw_regex -> raw_regex
+  type raw_regex = CharSet.t RegexTree.raw_regex
 
   let raw_regex_to_str_regex r =
     let par = spf "\\(%s\\)" in
@@ -661,11 +653,10 @@ module MakeAutomata (C : CHARAC) = struct
   let union_normal_form_to_raw_regex ll =
     List.left_reduce [%here] alt @@ List.map (fun l -> Seq l) ll
 
-  (* let layout_symbolic_trace rs = *)
-  (*   let open DesymFA in *)
-  (*   List.split_by "; " *)
-  (*     (function Star _ -> "□*" | _ as r -> layout_raw_regex r) *)
-  (*     rs *)
+  let omit_layout_symbolic_trace rs =
+    List.split_by "; "
+      (function Star _ -> "□*" | _ as r -> layout_raw_regex r)
+      rs
 
   let layout_symbolic_trace rs = List.split_by "; " layout_raw_regex rs
 

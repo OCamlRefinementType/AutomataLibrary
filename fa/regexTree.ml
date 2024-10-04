@@ -60,13 +60,24 @@ and ('t, 'a) regex_expr =
 [@@deriving sexp, show, eq, ord]
 
 type 'c raw_regex =
-  | Empty : 'c raw_regex
-  | Eps : 'c raw_regex
-  | Char : 'c -> 'c raw_regex
+  | Empty : 'c raw_regex (* L = { } *)
+  | Eps : 'c raw_regex (* L = {ε} *)
+  | MultiChar : 'c -> 'c raw_regex
   | Alt : 'c raw_regex * 'c raw_regex -> 'c raw_regex
-  | Seq : 'c raw_regex * 'c raw_regex -> 'c raw_regex
+  | Inters : 'c raw_regex * 'c raw_regex -> 'c raw_regex
+  | Comple : 'c * 'c raw_regex -> 'c raw_regex
+  | Seq : 'c raw_regex list -> 'c raw_regex
   | Star : 'c raw_regex -> 'c raw_regex
 [@@deriving sexp, show, eq, ord]
+
+(* type 'c raw_regex = *)
+(*   | Empty : 'c raw_regex *)
+(*   | Eps : 'c raw_regex *)
+(*   | Char : 'c -> 'c raw_regex *)
+(*   | Alt : 'c raw_regex * 'c raw_regex -> 'c raw_regex *)
+(*   | Seq : 'c raw_regex * 'c raw_regex -> 'c raw_regex *)
+(*   | Star : 'c raw_regex -> 'c raw_regex *)
+(* [@@deriving sexp, show, eq, ord] *)
 
 (** ast_builder *)
 
