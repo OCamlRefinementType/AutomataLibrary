@@ -467,7 +467,7 @@ module MakeAutomata (C : CHARAC) = struct
   let seq l =
     let l = seq_unfold (Seq l) in
     if List.exists (function Empty -> true | _ -> false) l then Empty
-    else Seq l
+    else match l with [] -> Eps | _ -> Seq l
 
   let alt a b =
     match (a, b) with
@@ -607,16 +607,18 @@ module MakeAutomata (C : CHARAC) = struct
       let ss_next =
         StateMap.map (StateMap.map (fun cs -> MultiChar cs)) ss_next
       in
-      (* let () = print_ss_next ss_next in *)
       let ss_next =
         StateMap.add new_start (StateMap.singleton dfa.start Eps) ss_next
       in
       let ss_next =
         StateSet.fold
-          (fun s -> StateMap.add s (StateMap.singleton new_final Eps))
+          (fun s ->
+            StateMap.update s (function
+              | None -> Some (StateMap.singleton new_final Eps)
+              | Some m -> Some (StateMap.add new_final Eps m)))
           dfa.finals ss_next
       in
-
+      (* let () = print_ss_next ss_next in *)
       let rec loop i ss_next =
         (* let () = Printf.printf "Work on %i\n" i in *)
         (* let () = print_ss_next ss_next in *)
