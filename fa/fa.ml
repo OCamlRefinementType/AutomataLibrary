@@ -141,17 +141,17 @@ module SeventLabel = struct
   let delimit_cotexnt_char = delimit_cotexnt_se
 end
 
-module DRegexLabel = struct
-  type t = (Nt.t, DesymLabel.t) regex
+(* module DRegexLabel = struct *)
+(*   type t = (Nt.t, DesymLabel.t) regex *)
 
-  let compare = compare_regex (fun _ _ -> 0) DesymLabel.compare
-  let layout = layout_desym_regex
-  let delimit_cotexnt_char = _die_with [%here] "never"
-end
+(*   let compare = compare_regex (fun _ _ -> 0) DesymLabel.compare *)
+(*   let layout = layout_desym_regex *)
+(*   let delimit_cotexnt_char = _die_with [%here] "never" *)
+(* end *)
 
-module DRegexFA = struct
-  include MakeAA (DRegexLabel)
-end
+(* module DRegexFA = struct *)
+(*   include MakeAA (DRegexLabel) *)
+(* end *)
 
 module SFA = struct
   include MakeAA (SeventLabel)
