@@ -589,6 +589,13 @@ module MakeAutomata (C : CHARAC) = struct
     in
     ss_next
 
+  let print_ss_next ss_next =
+    StateMap.iter
+      (fun s ->
+        StateMap.iter (fun s' r ->
+            Printf.printf "%i --[%s]--> %i\n" s (layout_raw_regex r) s'))
+      ss_next
+
   let dfa_to_reg (dfa : dfa) =
     let dfa = normalize_dfa dfa in
     if StateSet.cardinal dfa.finals == 0 then Empty
@@ -597,17 +604,10 @@ module MakeAutomata (C : CHARAC) = struct
       let ss_next = dfa_next_to_ss_next dfa in
       let new_start = n in
       let new_final = n + 1 in
-      let print_ss_next ss_next =
-        StateMap.iter
-          (fun s ->
-            StateMap.iter (fun s' r ->
-                Printf.printf "%i --[%s]--> %i\n" s (layout_raw_regex r) s'))
-          ss_next
-      in
       let ss_next =
         StateMap.map (StateMap.map (fun cs -> MultiChar cs)) ss_next
       in
-      let () = print_ss_next ss_next in
+      (* let () = print_ss_next ss_next in *)
       let ss_next =
         StateMap.add new_start (StateMap.singleton dfa.start Eps) ss_next
       in
@@ -618,8 +618,8 @@ module MakeAutomata (C : CHARAC) = struct
       in
 
       let rec loop i ss_next =
-        let () = Printf.printf "Work on %i\n" i in
-        let () = print_ss_next ss_next in
+        (* let () = Printf.printf "Work on %i\n" i in *)
+        (* let () = print_ss_next ss_next in *)
         if i == n then ss_next else loop (i + 1) (del_in_ss_next i ss_next)
       in
       let ss_next = loop 0 ss_next in
