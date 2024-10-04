@@ -634,4 +634,44 @@ module MakeAutomata (C : CHARAC) = struct
             | Some r -> r)
       in
       res
+
+  let raw_regex_to_union_normal_form (regex : raw_regex) =
+    let rec aux regex =
+      match regex with
+      | Empty | Inters _ | Comple _ ->
+          let () =
+            Printf.printf "(%s) should be optimized\n" (layout_raw_regex regex)
+          in
+          _die [%here]
+      | Eps -> [ [] ]
+      | MultiChar c -> [ [ MultiChar c ] ]
+      | Alt (c1, c2) -> aux c1 @ aux c2
+      | Seq l ->
+          List.fold_right
+            (fun choices res ->
+              List.map (fun (x, y) -> x @ y) @@ List.cross (aux choices) res)
+            l [ [] ]
+          (* let l = List.map aux l in *)
+          (* let l = List.map List.concat @@ List.choose_list_list l in *)
+          (* l *)
+      | Star r -> [ [ Star r ] ]
+    in
+    aux regex
+
+  let union_normal_form_to_raw_regex ll =
+    List.left_reduce [%here] alt @@ List.map (fun l -> Seq l) ll
+
+  (* let layout_symbolic_trace rs = *)
+  (*   let open DesymFA in *)
+  (*   List.split_by "; " *)
+  (*     (function Star _ -> "□*" | _ as r -> layout_raw_regex r) *)
+  (*     rs *)
+
+  let layout_symbolic_trace rs = List.split_by "; " layout_raw_regex rs
+
+  let layout_union_normal_form rs =
+    let rs = List.mapi (fun i s -> (i, s)) rs in
+    List.split_by "\n\n"
+      (fun (i, tr) -> spf "[%i]: %s" i (layout_symbolic_trace tr))
+      rs
 end

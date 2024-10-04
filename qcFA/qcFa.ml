@@ -195,6 +195,9 @@ let check_eq (dfa1 : dfa) (dfa2 : dfa) =
   let dfa2' = complement_dfa space dfa2 in
   check_emp (intersect_dfa dfa1 dfa2') && check_emp (intersect_dfa dfa1' dfa2)
 
+let check_eq_raw_regex (r1 : raw_regex) (r2 : raw_regex) =
+  check_eq (compile_raw_regex_to_dfa r1) (compile_raw_regex_to_dfa r2)
+
 let qc_test_dfa_to_regex_2 (num_regex : int) =
   let regexs = QCheck.Gen.generate ~n:num_regex basic_raw_regex_gen in
   let rec loop rs =
@@ -210,8 +213,24 @@ let qc_test_dfa_to_regex_2 (num_regex : int) =
   in
   loop regexs
 
+let qc_test_dfa_to_unf_2 (num_regex : int) =
+  let regexs = QCheck.Gen.generate ~n:num_regex basic_raw_regex_gen in
+  let rec loop rs =
+    match rs with
+    | [] -> true
+    | r :: rs ->
+        let r' =
+          union_normal_form_to_raw_regex @@ raw_regex_to_union_normal_form r
+        in
+        let () = Printf.printf "r: %s\n" (layout_raw_regex r) in
+        let () = Printf.printf "r': %s\n" (layout_raw_regex r') in
+        if check_eq_raw_regex r r' then loop rs else false
+  in
+  loop regexs
+
 (* let%test _ = qc_test_dfa_to_regex 1000 100 *)
-let%test _ = qc_test_dfa_to_regex_2 1000
+let%test _ = qc_test_dfa_to_unf_2 200
+(* let%test _ = qc_test_dfa_to_regex_2 1000 *)
 (* let%test _ = qc_test_compile_raw_regex_to_dfa_2 10 30 *)
 
 (* let%test _ = *)
