@@ -3,7 +3,15 @@ open Zutils
 open Regex
 open BasicFa
 
-module MakeAutomata (C : CHARAC) = struct
+module Arden (FA : FINITE_AUTOMATA) = struct
+  open FA
+
+  type regex_lit =
+    | EqRegex of raw_regex
+    | EqVar of string
+    | EqSeq of (regex_lit * regex_lit)
+    | EqOr of (regex_lit * regex_lit)
+
   module EpsC = struct
     type t = C.t option
 
@@ -497,55 +505,4 @@ module MakeAutomata (C : CHARAC) = struct
 
   let compile_regex_to_dfa (r : ('t, C.t) regex) : dfa =
     compile_raw_regex_to_dfa @@ regex_to_raw r
-
-  (** automata to regex *)
-
-  type regex_lit =
-    | EqEps
-    | EqEmp
-    | EqChar of CharSet.t
-    | EqVar of int
-    | EqSeq of (regex_lit * regex_lit)
-    | EqOr of regex_lit list
-    | EqStar of regex_lit
-
-  let rec layout_regex_lit = function
-    | EqEps -> layout_raw_regex Eps
-    | EqEmp -> layout_raw_regex Empty
-    | EqChar r -> layout_raw_regex (MultiChar r)
-    | EqVar x -> string_of_int x
-    | EqSeq (x, y) -> spf "%s %s" (layout_regex_lit x) (layout_regex_lit y)
-    | EqOr l -> List.split_by " + " layout_regex_lit l
-    | EqStar x -> spf "(%s)*" (layout_regex_lit x)
-
-  (* let smart_eq_or a b= *)
-  (*   match (a, b) with *)
-  (*   | EqEmp, _ -> b *)
-  (*   | _, EqEmp -> a *)
-  (*   | _, _ -> EqOr (a, b) *)
-
-  let mk_equation s ss_next =
-    let m = StateMap.filter_map (fun _ -> StateMap.find_opt s) ss_next in
-    let eq =
-      StateMap.fold (fun s' cs eq -> EqSeq (EqChar cs, EqVar s') :: eq) m []
-    in
-    (StateMap.mem s m, eq)
-
-  let layout_equations l =
-    List.iter
-      (fun (s, eq) -> Printf.printf "%i := %s" s (layout_regex_lit eq))
-      l
-
-  let mk_equations (dfa : dfa) =
-    let ss_next = dfa_next_to_ss_next dfa in
-    let l =
-      dfa_fold_states
-        (fun s l ->
-          let _, eq = mk_equation s ss_next in
-          let eq = if s == dfa.start then EqOr (EqEps :: eq) else EqOr eq in
-          (s, eq) :: l)
-        dfa []
-    in
-    let () = layout_equations l in
-    ()
 end

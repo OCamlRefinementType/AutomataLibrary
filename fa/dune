@@ -8,6 +8,7 @@
    regexTree
    regex
    translation
+   ; arden
    backend
    to_regex
    normal_regex_typing

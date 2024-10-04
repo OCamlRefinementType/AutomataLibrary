@@ -141,9 +141,36 @@ module SeventLabel = struct
   let delimit_cotexnt_char = delimit_cotexnt_se
 end
 
+module DRegexLabel = struct
+  type t = (Nt.t, DesymLabel.t) regex
+
+  let compare = compare_regex (fun _ _ -> 0) DesymLabel.compare
+  let layout = layout_desym_regex
+  let delimit_cotexnt_char = _die_with [%here] "never"
+end
+
+module DRegexFA = struct
+  include MakeAA (DRegexLabel)
+end
+
 module SFA = struct
   include MakeAA (SeventLabel)
   open Zdatatype
+
+  let raw_regex_to_regex regex =
+    let rec aux = function
+      | Empty -> EmptyA
+      | Eps -> EpsilonA
+      | MultiChar cs -> MultiAtomic (List.of_seq @@ CharSet.to_seq cs)
+      | Alt (r1, r2) -> LorA (aux r1, aux r2)
+      | Inters (r1, r2) -> LandA (aux r1, aux r2)
+      | Comple (cs, r2) ->
+          DComplementA
+            { atoms = List.of_seq @@ CharSet.to_seq cs; body = aux r2 }
+      | Seq rs -> SeqA (List.map aux rs)
+      | Star r -> StarA (aux r)
+    in
+    aux regex
 
   let unionify_sevent (dfa : dfa) =
     let ss_next = dfa_next_to_ss_next dfa in
