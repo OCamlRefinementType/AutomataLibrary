@@ -458,10 +458,18 @@ module MakeAutomata (C : CHARAC) = struct
     | None -> emp_lit_dfa
     | Some r -> eps_determinize r
 
-  (* let seq l r = match (l, r) with Eps, s | s, Eps -> s | l, r -> Seq (l, r) *)
+  let rec seq_unfold = function
+    | Seq l -> List.concat_map seq_unfold l
+    | Eps -> []
+    | _ as r -> [ r ]
+
   let seq l =
-    let l = List.filter (function Eps -> false | _ -> true) l in
-    match l with [] -> Eps | _ -> Seq l
+    let l = seq_unfold (Seq l) in
+    if List.exists (function Empty -> true | _ -> false) l then Empty
+    else Seq l
+
+  let alt a b =
+    match (a, b) with Empty, _ -> b | _, Empty -> a | _, _ -> Alt (a, b)
 
   let mk_repeat (n, r) = seq (List.init n (fun _ -> r))
   (* match n with *)
