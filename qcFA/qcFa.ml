@@ -220,7 +220,8 @@ let qc_test_dfa_to_unf_2 (num_regex : int) =
     | [] -> true
     | r :: rs ->
         let r' =
-          union_normal_form_to_raw_regex @@ raw_regex_to_union_normal_form r
+          union_normal_form_to_raw_regex
+          @@ raw_regex_to_union_normal_form (fun c -> [ c ]) r
         in
         let () = Printf.printf "r: %s\n" (layout_raw_regex r) in
         let () = Printf.printf "r': %s\n" (layout_raw_regex r') in

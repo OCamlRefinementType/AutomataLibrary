@@ -627,7 +627,7 @@ module MakeAutomata (C : CHARAC) = struct
       in
       res
 
-  let raw_regex_to_union_normal_form (regex : raw_regex) =
+  let raw_regex_to_union_normal_form f (regex : raw_regex) =
     let rec aux regex =
       match regex with
       | Empty | Inters _ | Comple _ ->
@@ -636,7 +636,7 @@ module MakeAutomata (C : CHARAC) = struct
           in
           _die [%here]
       | Eps -> [ [] ]
-      | MultiChar c -> [ [ MultiChar c ] ]
+      | MultiChar c -> [ List.map (fun c -> MultiChar c) (f c) ]
       | Alt (c1, c2) -> aux c1 @ aux c2
       | Seq l ->
           List.fold_right
@@ -644,7 +644,7 @@ module MakeAutomata (C : CHARAC) = struct
               List.map (fun (x, y) -> x @ y) @@ List.cross (aux choices) res)
             l [ [] ]
           (* let l = List.map aux l in *)
-          (* let l = List.map List.concat @@ List.choose_list_list l in *)
+          (* let l = List.map List.concat @@ List.onchoose_list_list l in *)
           (* l *)
       | Star r -> [ [ Star r ] ]
     in
