@@ -435,6 +435,7 @@ module MakeAutomata (C : CHARAC) = struct
           match compile_raw_regex_to_eps_nfa r with
           | None -> compile_raw_regex_to_eps_nfa (Star (MultiChar cs))
           | Some r -> Some (complement_eps_nfa cs r))
+      | Seq [] -> None
       | Seq rs ->
           let rs' = List.filter_map compile_raw_regex_to_eps_nfa rs in
           if List.length rs' < List.length rs then None
@@ -560,4 +561,75 @@ module MakeAutomata (C : CHARAC) = struct
     in
     let () = layout_equations l in
     ()
+
+  let del_in_ss_next s ss_next =
+    let self_m =
+      match StateMap.find_opt s ss_next with
+      | None -> _die [%here]
+      | Some m -> m
+    in
+    let self_char =
+      match StateMap.find_opt s self_m with None -> Eps | Some c -> Star c
+    in
+    let smart_update s r =
+      StateMap.update s (function None -> Some r | Some r' -> Some (alt r r'))
+    in
+    let ss_next =
+      StateMap.map
+        (fun m ->
+          StateMap.fold
+            (fun s' r' m' ->
+              if s != s' then smart_update s' r' m'
+              else
+                StateMap.fold
+                  (fun s'' r'' -> smart_update s'' (seq [ r'; self_char; r'' ]))
+                  self_m m')
+            m StateMap.empty)
+        ss_next
+    in
+    ss_next
+
+  let dfa_to_reg (dfa : dfa) =
+    let dfa = normalize_dfa dfa in
+    if StateSet.cardinal dfa.finals == 0 then Empty
+    else
+      let n = num_states_dfa dfa in
+      let ss_next = dfa_next_to_ss_next dfa in
+      let new_start = n in
+      let new_final = n + 1 in
+      let print_ss_next ss_next =
+        StateMap.iter
+          (fun s ->
+            StateMap.iter (fun s' r ->
+                Printf.printf "%i --[%s]--> %i\n" s (layout_raw_regex r) s'))
+          ss_next
+      in
+      let ss_next =
+        StateMap.map (StateMap.map (fun cs -> MultiChar cs)) ss_next
+      in
+      let () = print_ss_next ss_next in
+      let ss_next =
+        StateMap.add new_start (StateMap.singleton dfa.start Eps) ss_next
+      in
+      let ss_next =
+        StateSet.fold
+          (fun s -> StateMap.add s (StateMap.singleton new_final Eps))
+          dfa.finals ss_next
+      in
+
+      let rec loop i ss_next =
+        let () = Printf.printf "Work on %i\n" i in
+        let () = print_ss_next ss_next in
+        if i == n then ss_next else loop (i + 1) (del_in_ss_next i ss_next)
+      in
+      let ss_next = loop 0 ss_next in
+      let res =
+        match StateMap.find_opt new_start ss_next with
+        | None -> _die [%here]
+        | Some m -> (
+            match StateMap.find_opt new_final m with
+            | None -> _die [%here]
+            | Some r -> r)
+      in
+      res
 end

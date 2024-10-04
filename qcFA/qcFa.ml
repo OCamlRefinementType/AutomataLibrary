@@ -148,3 +148,24 @@ let qc_test_fa_union (num_regex : int) (times : int) =
         aux rs
   in
   aux regexs
+
+let qc_test_dfa_to_regex (num_regex : int) =
+  let regexs = QCheck.Gen.generate ~n:num_regex basic_raw_regex_gen in
+  let rec loop rs =
+    match rs with
+    | [] -> true
+    | r :: rs ->
+        let dfa = compile_raw_regex_to_dfa r in
+        let r' = dfa_to_reg dfa in
+        let dfa' = compile_raw_regex_to_dfa r' in
+        let dfa'' = minimize @@ intersect_dfa dfa' (complement_dfa space dfa) in
+        if StateSet.is_empty dfa''.finals then loop rs
+        else
+          let () = Printf.printf "r: %s\n" (layout_raw_regex r) in
+          let () = Printf.printf "r': %s\n" (layout_raw_regex r) in
+          let () = Printf.printf "dfa:\n%s\n" (layout_dfa dfa'') in
+          false
+  in
+  loop regexs
+
+let%test _ = qc_test_dfa_to_regex 100

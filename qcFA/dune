@@ -16,6 +16,7 @@
    gen
    qcFa
  )
+ (inline_tests)
  (preprocess
-  (pps ppx_optcomp ppx_compare ppx_sexp_conv ppx_here))
+  (pps ppx_optcomp ppx_compare ppx_sexp_conv ppx_here ppx_inline_test))
  (libraries fa qcheck str))
