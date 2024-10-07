@@ -468,6 +468,7 @@ module MakeAutomata (C : CHARAC) = struct
     | MultiChar c1, MultiChar c2 -> MultiChar (CharSet.union c1 c2)
     | _, _ -> Alt (a, b)
 
+  let alt_list l = List.left_reduce [%here] alt (Empty :: l)
   let mk_repeat (n, r) = seq (List.init n (fun _ -> r))
   (* match n with *)
   (* | 0 ->  *)
