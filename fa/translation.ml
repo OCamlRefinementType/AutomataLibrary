@@ -666,4 +666,19 @@ module MakeAutomata (C : CHARAC) = struct
     List.split_by "\n\n"
       (fun (i, tr) -> spf "[%i]: %s" i (layout_symbolic_trace tr))
       rs
+
+  let is_empty_raw_regex = function Empty -> true | _ -> false
+
+  let raw_reg_map f reg =
+    let rec aux = function
+      | Empty -> Empty
+      | Eps -> Eps
+      | MultiChar cs -> MultiChar (f cs)
+      | Alt (r1, r2) -> Alt (aux r1, aux r2)
+      | Inters (r1, r2) -> Inters (aux r1, aux r2)
+      | Comple (cs, r2) -> Comple (f cs, aux r2)
+      | Seq rs -> Seq (List.map aux rs)
+      | Star r -> Star (aux r)
+    in
+    aux reg
 end

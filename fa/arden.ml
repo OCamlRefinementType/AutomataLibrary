@@ -12,6 +12,8 @@ module Arden (FA : FINITE_AUTOMATA) = struct
     | EqSeq of (regex_lit * regex_lit)
     | EqOr of (regex_lit * regex_lit)
 
+  let mk_equal
+
   module EpsC = struct
     type t = C.t option
 

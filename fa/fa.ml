@@ -130,7 +130,34 @@ end
 module CharAutomata = MakeAA (CharC)
 module StrAutomata = MakeAA (StringC)
 module IdAutomata = MakeAA (Int64C)
-module DesymFA = MakeAA (DesymLabel)
+
+module DesymFA = struct
+  include MakeAA (DesymLabel)
+  open Zdatatype
+
+  let unify_charset_by_op cs =
+    let m =
+      CharSet.fold
+        (fun (op, id) ->
+          StrMap.update op (function
+            | None -> Some (StateSet.singleton id)
+            | Some s -> Some (StateSet.add id s)))
+        cs StrMap.empty
+    in
+    let add_op op s =
+      StateSet.fold (fun id -> CharSet.add (op, id)) s CharSet.empty
+    in
+    StrMap.fold (fun op m res -> add_op op m :: res) m []
+
+  let normalize_desym_regex (rawreg : raw_regex) =
+    (* let () = Printf.printf "Desym Reg: %s\n" (layout_desym_regex goal.reg) in *)
+    (* let () = *)
+    (*   Printf.printf "Desym Raw Reg%s\n" (DesymFA.layout_raw_regex rawreg) *)
+    (* in *)
+    (* let () = Printf.printf "%s\n" (DesymFA.layout_dfa fa) in *)
+    dfa_to_reg @@ minimize @@ compile_raw_regex_to_dfa rawreg
+end
+
 open Prop
 
 module SeventLabel = struct
@@ -233,6 +260,26 @@ module SFA = struct
           EffEvent { op; vs = vs'; phi = phi' }
     in
     dfa_map_c f dfa
+
+  let unify_se cs =
+    let m =
+      CharSet.fold
+        (fun se m ->
+          match se with
+          | GuardEvent _ -> _die [%here]
+          | EffEvent { op; vs; phi } ->
+              StrMap.update op
+                (function
+                  | None -> Some (vs, phi)
+                  | Some (vs', phi') -> Some (vs', smart_add_to phi phi'))
+                m)
+        cs StrMap.empty
+    in
+    StrMap.fold
+      (fun op (vs, phi) -> CharSet.add (EffEvent { op; vs; phi }))
+      m CharSet.empty
+
+  let unify_raw_regex reg = raw_reg_map unify_se reg
 end
 
 let symbolic_dfa_to_event_name_dfa (dfa : SFA.dfa) =
