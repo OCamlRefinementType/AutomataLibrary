@@ -127,7 +127,7 @@ and normalize_regex_expr (regex : ('t, 'a) regex_expr) : ('t, 'b) regex_expr =
   in
   aux regex
 
-let show_raw_regex regex = show_regex (fun _ _ -> ()) (fun _ _ -> ()) regex
+let omit_show_regex regex = show_regex (fun _ _ -> ()) (fun _ _ -> ()) regex
 
 let rec rexpr_to_lit = function
   | RConst c -> Some (AC c)
@@ -138,8 +138,8 @@ let rec rexpr_to_lit = function
 let _subst_se name (m : ('t, 't sevent) regex_expr) se =
   (* let () = *)
   (*   Printf.printf "\tsubst %s --> %s in %s\n" name *)
-  (*     (show_raw_regex (RExpr m)) *)
-  (*     (show_raw_regex (Atomic se)) *)
+  (*     (omit_show_regex (RExpr m)) *)
+  (*     (omit_show_regex (Atomic se)) *)
   (* in *)
   match rexpr_to_lit m with
   | Some lit -> subst_sevent_instance name lit se
@@ -233,9 +233,9 @@ let rec desugar ctx regex =
   match regex with
   | RExpr (RRegex r) -> desugar ctx r
   | RExpr _ ->
-      let () = Printf.printf "%s\n" (show_raw_regex regex) in
+      let () = Printf.printf "%s\n" (omit_show_regex regex) in
       _failatwith [%here]
-        (spf "should be eliminated: %s" (show_raw_regex regex))
+        (spf "should be eliminated: %s" (omit_show_regex regex))
   | Extension r -> Extension (desugar_regex_extension ctx r)
   | SyntaxSugar (SetMinusA (r1, r2)) ->
       desugar ctx
@@ -388,13 +388,13 @@ let simp_regex (eq : 'a -> 'a -> bool) (regex : ('t, 'a) regex) =
   let mk_multiatom ses =
     (* let () = *)
     (*   Printf.printf "%i = len(%s)\n" (List.length ses) *)
-    (*     (show_raw_regex (MultiAtomic ses)) *)
+    (*     (omit_show_regex (MultiAtomic ses)) *)
     (* in *)
     let ses = List.slow_rm_dup eq ses in
     match ses with [] -> EmptyA | _ -> MultiAtomic ses
   in
   let rec aux regex =
-    (* let () = Printf.printf "simp: %s\n" @@ show_raw_regex regex in *)
+    (* let () = Printf.printf "simp: %s\n" @@ omit_show_regex regex in *)
     match regex with
     | RExpr _ | SyntaxSugar _ | Extension _ ->
         _die_with [%here] "should be eliminated"
