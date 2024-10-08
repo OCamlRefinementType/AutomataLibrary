@@ -459,7 +459,7 @@ module MakeAutomata (C : CHARAC) = struct
   let seq l =
     let l = seq_unfold (Seq l) in
     if List.exists (function Empty -> true | _ -> false) l then Empty
-    else match l with [] -> Eps | _ -> Seq l
+    else match l with [] -> Eps | [ x ] -> x | _ -> Seq l
 
   let alt a b =
     match (a, b) with
