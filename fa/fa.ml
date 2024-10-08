@@ -149,13 +149,24 @@ module DesymFA = struct
     in
     StrMap.fold (fun op m res -> add_op op m :: res) m []
 
-  let normalize_desym_regex (rawreg : raw_regex) =
+  let do_normalize_desym_regex (rawreg : raw_regex) =
     (* let () = Printf.printf "Desym Reg: %s\n" (layout_desym_regex goal.reg) in *)
     (* let () = *)
     (*   Printf.printf "Desym Raw Reg%s\n" (DesymFA.layout_raw_regex rawreg) *)
     (* in *)
     (* let () = Printf.printf "%s\n" (DesymFA.layout_dfa fa) in *)
     dfa_to_reg @@ minimize @@ compile_raw_regex_to_dfa rawreg
+
+  let normalize_desym_regex (rawreg : raw_regex) =
+    let rec aux rawreg =
+      match rawreg with
+      | Empty | Eps | MultiChar _ -> rawreg
+      | Alt (r1, r2) -> alt (aux r1) (aux r2)
+      | Inters _ | Comple _ -> do_normalize_desym_regex rawreg
+      | Seq l -> seq (List.map aux l)
+      | Star r -> Star (do_normalize_desym_regex r)
+    in
+    aux rawreg
 end
 
 open Prop
