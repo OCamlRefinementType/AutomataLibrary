@@ -32,7 +32,13 @@ let models_lit tab lit =
   (* in *)
   match Hashtbl.find_opt tab lit.x with
   | Some b -> b
-  | None -> _failatwith [%here] (spf "tab_models_lit(%s)" (layout_lit lit.x))
+  | None ->
+      let () =
+        Hashtbl.iter
+          (fun l b -> Printf.printf "%s ==> %b\n" (layout_lit l) b)
+          tab
+      in
+      _failatwith [%here] (spf "tab_models_lit(%s)" (layout_lit lit.x))
 
 let models_prop m prop =
   let rec aux prop =
