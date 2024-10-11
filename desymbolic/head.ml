@@ -71,6 +71,18 @@ let make_tab addtional_global_args regex =
   (* let num_lits = num_lits g in *)
   (* let () = record_max stat_max_lits num_lits in *)
   let { global_lits; local_lits } = g in
+  let () =
+    _log "desymbolic" @@ fun _ ->
+    Printf.printf "global_lits: %s\n"
+      (List.split_by_comma layout_lit global_lits)
+  in
+  let () =
+    _log "desymbolic" @@ fun _ ->
+    StrMap.iter
+      (fun op (_, m) ->
+        Pp.printf "[%s]: %s\n" op (List.split_by_comma layout_lit m))
+      local_lits
+  in
   let global_args =
     StrMap.map
       (fun (local_vars, lits) ->
