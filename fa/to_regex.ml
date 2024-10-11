@@ -230,6 +230,10 @@ let layout_regex_expr layout_ty layout_label r =
 let layout = pprint
 let layout_str_regex regex = layout Nt.layout (fun x -> x) regex
 let layout_symbolic_regex regex = layout Nt.layout layout_se regex
+
+let layout_symbolic_regex_precise regex =
+  layout Nt.layout layout_se_precise regex
+
 let layout_desym_regex regex = layout Nt.layout DesymLabel.layout regex
 let str_regex_of_expr = of_expr id_of_expr
 let symbolic_regex_of_expr = of_expr sevent_of_expr
