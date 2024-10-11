@@ -119,7 +119,7 @@ let mk_mt_tab sat_solver { global_features; local_features } =
     print_opt_stat (List.length global_tab, test_num) global_features
   in
   let () = print_global_fv global_features global_tab in
-  let () = if List.length global_tab > 20 then _die [%here] in
+  (* let () = if List.length global_tab > 20 then _die [%here] in *)
   let local_dts =
     StrMap.mapi
       (fun op (vs, features) ->
