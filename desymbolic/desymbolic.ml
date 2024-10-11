@@ -196,7 +196,7 @@ type mode = UnionFA | OriginalFA
 let desymbolic mode checker (qvs, srl) =
   let head = ctx_ctx_init qvs srl in
   let head = refine_head checker head in
-  (* let () = Env.show_log "desymbolic" @@ fun _ -> Head.pprint_head head in *)
+  let () = _log "desymbolic" @@ fun _ -> Head.pprint_head head in
   let dts = Mapping.mk_mt_tab checker head in
   let () =
     _log "desymbolic" @@ fun _ ->

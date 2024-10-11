@@ -219,7 +219,7 @@ module SFA = struct
             let op, vs, phi = _get_sevent_fields [%here] se in
             StrMap.update op (function
               | None -> Some (vs, phi)
-              | Some (_, phi') -> Some (vs, smart_add_to phi phi')))
+              | Some (_, phi') -> Some (vs, smart_or [ phi; phi' ])))
           cs StrMap.empty
       in
       StrMap.fold
