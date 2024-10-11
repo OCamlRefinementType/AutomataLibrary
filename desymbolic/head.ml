@@ -42,8 +42,14 @@ let litlist_to_tab (vs, l) =
   (*     dummy :: l *)
   (*   else l *)
   (* in *)
-  let l = List.slow_rm_dup eq_lit l in
-  (vs, Array.of_list l)
+  let l' = List.slow_rm_dup eq_lit l in
+  let () =
+    _log "desymbolic" @@ fun _ ->
+    Pp.printf "litlist_to_tab: %s ---> %s\n"
+      (List.split_by_comma layout_lit l)
+      (List.split_by_comma layout_lit l')
+  in
+  (vs, Array.of_list l')
 
 let build_partial_one partial_func vars =
   let tys, _ = Nt.destruct_arr_tp partial_func.ty in

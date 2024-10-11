@@ -508,3 +508,4 @@ module Arden (FA : FINITE_AUTOMATA) = struct
   let compile_regex_to_dfa (r : ('t, C.t) regex) : dfa =
     compile_raw_regex_to_dfa @@ regex_to_raw r
 end
+
