@@ -163,11 +163,12 @@ let filter_aviable_features checker (vs, features) =
 
 let refine_head checker { global_features; local_features } =
   let global_features = filter_aviable_features checker ([], global_features) in
-  let local_features =
-    StrMap.map
-      (fun (vs, lits) -> (vs, filter_aviable_features checker (vs, lits)))
-      local_features
-  in
+  (** HACK: it sense that we should not simplify the local features *)
+  (* let local_features = *)
+  (*   StrMap.map *)
+  (*     (fun (vs, lits) -> (vs, filter_aviable_features checker (vs, lits))) *)
+  (*     local_features *)
+  (* in *)
   { global_features; local_features }
 
 let ctx_ctx_init qvs regex =
