@@ -173,5 +173,5 @@ let refine_head checker { global_features; local_features } =
 let ctx_ctx_init qvs regex =
   let qvs = List.map (fun v -> (AVar v) #: v.ty) qvs in
   let tab = make_tab qvs regex in
-  (* let () = Env.show_log "desymbolic" @@ fun _ -> pprint_head tab in *)
+  let () = _log "desymbolic" @@ fun _ -> pprint_head tab in
   tab
