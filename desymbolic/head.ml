@@ -161,8 +161,8 @@ let filter_aviable_features checker (vs, features) =
   in
   Array.of_list @@ List.filter f @@ Array.to_list features
 
-let refine_head checker { global_features; local_features } =
-  let global_features = filter_aviable_features checker ([], global_features) in
+let refine_head _ { global_features; local_features } =
+  (* let global_features = filter_aviable_features checker ([], global_features) in *)
   (** HACK: it sense that we should not simplify the local features *)
   (* let local_features = *)
   (*   StrMap.map *)
