@@ -282,7 +282,7 @@ module SFA = struct
               StrMap.update op
                 (function
                   | None -> Some (vs, phi)
-                  | Some (vs', phi') -> Some (vs', smart_add_to phi phi'))
+                  | Some (vs', phi') -> Some (vs', smart_or [ phi; phi' ]))
                 m)
         cs StrMap.empty
     in
