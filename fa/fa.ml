@@ -4,6 +4,7 @@ open Backend
 include Common
 include BasicFa
 include Regex
+include To_sevent
 include To_regex
 
 module MakeAutomataDot (FA : FINITE_AUTOMATA) = struct
@@ -179,7 +180,7 @@ module SeventLabel = struct
 
   let compare = compare_sevent (fun _ _ -> 0)
   let layout = pprintRaw
-  let delimit_cotexnt_char = delimit_cotexnt_se
+  (* let delimit_cotexnt_char = delimit_cotexnt_se *)
 end
 
 (* module DRegexLabel = struct *)
@@ -219,14 +220,14 @@ module SFA = struct
       let m =
         CharSet.fold
           (fun se ->
-            let op, vs, phi = _get_sevent_fields [%here] se in
+            let { op; vs; phi } = se in
             StrMap.update op (function
               | None -> Some (vs, phi)
               | Some (_, phi') -> Some (vs, smart_or [ phi; phi' ])))
           cs StrMap.empty
       in
       StrMap.fold
-        (fun op (vs, phi) -> CharSet.add (EffEvent { op; vs; phi }))
+        (fun op (vs, phi) -> CharSet.add { op; vs; phi })
         m CharSet.empty
     in
     let ss_next = StateMap.map (StateMap.map f) ss_next in
@@ -246,8 +247,7 @@ module SFA = struct
 
   let rename_sevent event_ctx (dfa : dfa) =
     let f = function
-      | GuardEvent _ -> _die [%here]
-      | EffEvent { op; vs; phi } ->
+      | { op; vs; phi } ->
           let vs' =
             match StrMap.find_opt event_ctx op with
             | Some (Nt.Ty_record l) -> l
@@ -271,7 +271,7 @@ module SFA = struct
               (fun (v, v') -> subst_prop_instance v.x (AVar v'))
               (List.combine vs vs') phi
           in
-          EffEvent { op; vs = vs'; phi = phi' }
+          { op; vs = vs'; phi = phi' }
     in
     dfa_map_c f dfa
 
@@ -280,8 +280,7 @@ module SFA = struct
       CharSet.fold
         (fun se m ->
           match se with
-          | GuardEvent _ -> _die [%here]
-          | EffEvent { op; vs; phi } ->
+          | { op; vs; phi } ->
               StrMap.update op
                 (function
                   | None -> Some (vs, phi)
@@ -290,7 +289,7 @@ module SFA = struct
         cs StrMap.empty
     in
     StrMap.fold
-      (fun op (vs, phi) -> CharSet.add (EffEvent { op; vs; phi }))
+      (fun op (vs, phi) -> CharSet.add { op; vs; phi })
       m CharSet.empty
 
   let unify_raw_regex reg = raw_reg_map unify_se reg
@@ -300,8 +299,7 @@ let symbolic_dfa_to_event_name_dfa (dfa : SFA.dfa) =
   let open StrAutomata in
   let next =
     SFA.dfa_fold_transitions
-      (fun (st, ch, dest) ->
-        nfa_next_insert st (_get_sevent_name [%here] ch) dest)
+      (fun (st, ch, dest) -> nfa_next_insert st (_get_sevent_name ch) dest)
       dfa StateMap.empty
   in
   let nfa : nfa =
@@ -309,8 +307,13 @@ let symbolic_dfa_to_event_name_dfa (dfa : SFA.dfa) =
   in
   normalize_dfa @@ determinize nfa
 
-module RegexTypecheck = Normal_regex_typing
+module RegexTypecheck = struct
+  include Normal_sevent_typing
+  include Normal_regex_typing
+end
 
-let bi_symbolic_regex_check = Normal_regex_typing.bi_symbolic_regex_check
-let bi_str_regex_check = Normal_regex_typing.bi_str_regex_check
-let mk_regex_ctx = Normal_regex_typing.mk_regex_ctx
+include RegexTypecheck
+
+(* let bi_symbolic_regex_check = Normal_regex_typing.bi_symbolic_regex_check *)
+(* let bi_str_regex_check = Normal_regex_typing.bi_str_regex_check *)
+(* let mk_regex_ctx = Normal_regex_typing.mk_regex_ctx *)

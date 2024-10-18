@@ -58,11 +58,9 @@ let models_prop m prop =
 let partial_evaluate_sevent global_tab se =
   (* let open NRegex in *)
   match se with
-  | GuardEvent _ ->
-      _die [%here] (* if models_prop global_tab phi then AnyA else EmptyA *)
-  | EffEvent { op; vs; phi } ->
+  | { op; vs; phi } ->
       let phi = partial_evaluate_prop global_tab phi in
-      Atomic (EffEvent { op; vs; phi })
+      Atomic { op; vs; phi }
 
 let partial_evaluate_regex global_tab regex =
   (* let () = *)
@@ -93,8 +91,7 @@ let partial_evaluate_regex global_tab regex =
 
 let desymbolic_sevent dts se =
   match se with
-  | GuardEvent _ -> _die [%here]
-  | EffEvent { op; phi; _ } ->
+  | { op; phi; _ } ->
       let local_m = StrMap.find "desymbolic_sevent" dts op in
       let mts =
         List.filter_map
@@ -162,9 +159,9 @@ let mk_backward_mapping_aux { local_features; _ } local op ids =
   (*     (List.split_by_comma (fun x -> x.x) vs) *)
   (* in *)
   let phi = Mapping.mk_simp_local_prop features local_m ids in
-  EffEvent { op; vs; phi }
+  { op; vs; phi }
 (* let props = List.map (IntMap.find "die" local_m) ids in *)
-(* EffEvent { op; vs; phi = Or props } *)
+(*  { op; vs; phi = Or props } *)
 
 let mk_backward_mapping head local (es : DesymFA.CharSet.t) =
   let m =
@@ -185,7 +182,7 @@ let mk_original_backward_mapping head local (es : DesymFA.CharSet.t) =
         let vs, features = StrMap.find "die" head.local_features op in
         let local_m = StrMap.find "die" local op in
         let phi = Mapping.get_local_prop features local_m id in
-        let se = EffEvent { op; vs; phi } in
+        let se = { op; vs; phi } in
         SFA.CharSet.add se)
       es SFA.CharSet.empty
   in
@@ -256,12 +253,12 @@ let desymbolic_reg mode ctx checker (vs, reg) =
     _log "desymbolic" @@ fun _ ->
     Pp.printf "\n@{<bold>After Desugar:@}\n%s\n" (layout_symbolic_regex reg)
   in
-  let reg = delimit_context delimit_cotexnt_se reg in
-  let () =
-    _log "desymbolic" @@ fun _ ->
-    Pp.printf "\n@{<bold>After Delimit Context@}:\n%s\n"
-      (layout_symbolic_regex reg)
-  in
+  (* let reg = delimit_context delimit_cotexnt_se reg in *)
+  (* let () = *)
+  (*   _log "desymbolic" @@ fun _ -> *)
+  (*   Pp.printf "\n@{<bold>After Delimit Context@}:\n%s\n" *)
+  (*     (layout_symbolic_regex reg) *)
+  (* in *)
   desymbolic mode checker (vs, reg)
 
 let desymbolic_regspec mode ctx checker (vs, reg) =

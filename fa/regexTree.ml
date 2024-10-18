@@ -2,6 +2,7 @@ open Sexplib.Std
 open Zutils
 open Zdatatype
 open Prop
+include Sevent
 
 (** TODO: make a functor *)
 

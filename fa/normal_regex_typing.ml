@@ -2,6 +2,7 @@ open Zutils
 open PropTypecheck
 open Typectx
 open Regex
+open Normal_sevent_typing
 
 type t = Nt.t
 

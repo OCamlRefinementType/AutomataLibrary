@@ -3,6 +3,8 @@
  (public_name AutomataLibrary.fa)
  (wrapped true)
  (modules
+   sevent
+   to_sevent
    common
    basicFa
    regexTree
@@ -11,6 +13,7 @@
    ; arden
    backend
    to_regex
+   normal_sevent_typing
    normal_regex_typing
    fa
  )

@@ -5,6 +5,7 @@ open Zdatatype
 open RegexTree
 open Prop
 open Common
+open To_sevent
 
 let var_or_c_of_expr expr =
   match expr.pexp_desc with

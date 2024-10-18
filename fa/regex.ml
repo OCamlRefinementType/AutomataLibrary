@@ -361,10 +361,10 @@ let regex_is_function e : bool =
   in
   aux e
 
-let mk_sevent_from_se = function
-  | EffEvent { op; phi; vs } as e ->
-      if String.equal op "all" then GuardEvent { vs; phi } else e
-  | _ -> _die [%here]
+(* let mk_sevent_from_se = function *)
+(*   | EffEvent { op; phi; vs } as e -> *)
+(*       if String.equal op "all" then GuardEvent { vs; phi } else e *)
+(*   | _ -> _die [%here] *)
 
 let rec mk_lorA = function
   | [] -> EmptyA
@@ -376,13 +376,13 @@ let rec mk_landA = function
   | [ r ] -> r
   | r :: rs -> LandA (r, mk_landA rs)
 
-let mk_sevents_from_ses ses =
-  let all_events, or_events =
-    List.partition (function EffEvent _ -> true | GuardEvent _ -> false)
-    @@ List.map mk_sevent_from_se ses
-  in
-  let all_events = List.map (fun e -> Atomic e) all_events in
-  mk_lorA (ses_to_regex or_events :: all_events)
+(* let mk_sevents_from_ses ses = *)
+(*   let all_events, or_events = *)
+(*     List.partition (function EffEvent _ -> true | GuardEvent _ -> false) *)
+(*     @@ List.map mk_sevent_from_se ses *)
+(*   in *)
+(*   let all_events = List.map (fun e -> Atomic e) all_events in *)
+(*   mk_lorA (ses_to_regex or_events :: all_events) *)
 
 let simp_regex (eq : 'a -> 'a -> bool) (regex : ('t, 'a) regex) =
   let mk_multiatom ses =
