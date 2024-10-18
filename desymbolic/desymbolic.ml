@@ -253,7 +253,7 @@ let desymbolic_reg mode ctx checker (vs, reg) =
     _log "desymbolic" @@ fun _ ->
     Pp.printf "\n@{<bold>After Desugar:@}\n%s\n" (layout_symbolic_regex reg)
   in
-  (* let reg = delimit_context delimit_cotexnt_se reg in *)
+  let reg = delimit_context reg in
   (* let () = *)
   (*   _log "desymbolic" @@ fun _ -> *)
   (*   Pp.printf "\n@{<bold>After Delimit Context@}:\n%s\n" *)

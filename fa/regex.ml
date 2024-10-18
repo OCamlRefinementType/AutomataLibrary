@@ -276,8 +276,7 @@ and desugar_regex_extension ctx regex =
   | Ctx { atoms; body } -> Ctx { atoms; body = desugar_regex ctx body }
 
 (** eliminate extension *)
-let delimit_context (delimit_cotexnt_char : 'a list option * 'a -> 'a list)
-    (regex : ('t, 'a) regex) : ('t, 'a) regex =
+let delimit_context (regex : ('t, 'a) regex) : ('t, 'a) regex =
   let ctx, regex =
     match regex with
     | Extension (Ctx { atoms; body }) -> (Some atoms, body)
@@ -304,10 +303,8 @@ let delimit_context (delimit_cotexnt_char : 'a list option * 'a -> 'a list)
           List.slow_rm_dup (fun a b -> 0 == Stdlib.compare a b) atoms
         in
         aux (Some atoms) body
-    | Atomic e -> ses_to_regex @@ delimit_cotexnt_char (ctx, e)
-    | MultiAtomic es ->
-        ses_to_regex @@ List.concat
-        @@ List.map (fun e -> delimit_cotexnt_char (ctx, e)) es
+    | Atomic e -> Atomic e
+    | MultiAtomic es -> ses_to_regex es
     | EmptyA | EpsilonA -> regex
     | RepeatN (n, r) -> RepeatN (n, aux ctx r)
     | DComplementA { atoms; body } ->
