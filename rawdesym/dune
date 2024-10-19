@@ -1,0 +1,19 @@
+(library
+ (public_name AutomataLibrary.rawdesym)
+ (name rawdesym)
+ (wrapped true)
+ (libraries fa core compiler-libs)
+ (modules
+   common
+   intBinary
+   desymeval
+   resym
+   desymctx
+   satcheck
+   head
+   mapping
+   rawdesym
+ )
+ (inline_tests)
+ (preprocess (pps ppx_here ppx_inline_test))
+)

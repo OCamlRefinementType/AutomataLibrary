@@ -451,25 +451,25 @@ module MakeAutomata (C : CHARAC) = struct
     | None -> emp_lit_dfa
     | Some r -> eps_determinize r
 
-  let rec seq_unfold = function
-    | Seq l -> List.concat_map seq_unfold l
-    | Eps -> []
-    | _ as r -> [ r ]
+  (* let rec seq_unfold = function *)
+  (*   | Seq l -> List.concat_map seq_unfold l *)
+  (*   | Eps -> [] *)
+  (*   | _ as r -> [ r ] *)
 
-  let seq l =
-    let l = seq_unfold (Seq l) in
-    if List.exists (function Empty -> true | _ -> false) l then Empty
-    else match l with [] -> Eps | [ x ] -> x | _ -> Seq l
+  (* let seq l = *)
+  (*   let l = seq_unfold (Seq l) in *)
+  (*   if List.exists (function Empty -> true | _ -> false) l then Empty *)
+  (*   else match l with [] -> Eps | [ x ] -> x | _ -> Seq l *)
 
-  let alt a b =
-    match (a, b) with
-    | Empty, _ -> b
-    | _, Empty -> a
-    | MultiChar c1, MultiChar c2 -> MultiChar (CharSet.union c1 c2)
-    | _, _ -> Alt (a, b)
+  (* let alt a b = *)
+  (*   match (a, b) with *)
+  (*   | Empty, _ -> b *)
+  (*   | _, Empty -> a *)
+  (*   | MultiChar c1, MultiChar c2 -> MultiChar (CharSet.union c1 c2) *)
+  (*   | _, _ -> Alt (a, b) *)
 
-  let alt_list l = List.left_reduce [%here] alt (Empty :: l)
-  let mk_repeat (n, r) = seq (List.init n (fun _ -> r))
+  (* let alt_list l = List.left_reduce [%here] alt (Empty :: l) *)
+  let mk_repeat (n, r) = smart_seq (List.init n (fun _ -> r))
   (* match n with *)
   (* | 0 ->  *)
   (* let rec aux (n, r) = *)
@@ -565,7 +565,9 @@ module MakeAutomata (C : CHARAC) = struct
       match StateMap.find_opt s self_m with None -> Eps | Some c -> Star c
     in
     let smart_update s r =
-      StateMap.update s (function None -> Some r | Some r' -> Some (alt r r'))
+      StateMap.update s (function
+        | None -> Some r
+        | Some r' -> Some (smart_alt r r'))
     in
     let ss_next =
       StateMap.map
@@ -575,7 +577,8 @@ module MakeAutomata (C : CHARAC) = struct
               if s != s' then smart_update s' r' m'
               else
                 StateMap.fold
-                  (fun s'' r'' -> smart_update s'' (seq [ r'; self_char; r'' ]))
+                  (fun s'' r'' ->
+                    smart_update s'' (smart_seq [ r'; self_char; r'' ]))
                   self_m m')
             m StateMap.empty)
         ss_next
@@ -652,7 +655,7 @@ module MakeAutomata (C : CHARAC) = struct
     aux regex
 
   let union_normal_form_to_raw_regex ll =
-    List.left_reduce [%here] alt @@ List.map (fun l -> Seq l) ll
+    List.left_reduce [%here] smart_alt @@ List.map (fun l -> smart_seq l) ll
 
   let omit_layout_symbolic_trace rs =
     List.split_by "; "

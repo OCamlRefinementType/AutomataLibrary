@@ -162,12 +162,12 @@ module DesymFA = struct
     let rec aux rawreg =
       match rawreg with
       | Empty | Eps | MultiChar _ -> rawreg
-      | Alt (r1, r2) -> alt (aux r1) (aux r2)
+      | Alt (r1, r2) -> smart_alt (aux r1) (aux r2)
       | Comple (cs, Star (MultiChar cs')) ->
           let cs'' = CharSet.filter (fun c -> not (CharSet.mem c cs')) cs in
-          Star (MultiChar cs'')
+          smart_star (MultiChar cs'')
       | Inters _ | Comple _ -> do_normalize_desym_regex rawreg
-      | Seq l -> seq (List.map aux l)
+      | Seq l -> smart_seq (List.map aux l)
       | Star r -> Star (do_normalize_desym_regex r)
     in
     aux rawreg
