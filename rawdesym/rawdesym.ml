@@ -69,4 +69,4 @@ let normalize_symbolic_rawregex tyctx event_tyctx (gprop, r) =
 let desymbolic_symbolic_rewregex tyctx event_tyctx (gprop, r) =
   let desym_ctx = mk_desym_ctx tyctx event_tyctx (gprop, r) in
   let r' = do_desym desym_ctx (gprop, r) in
-  r'
+  (desym_ctx, r')
