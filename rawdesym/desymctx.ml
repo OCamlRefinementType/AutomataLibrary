@@ -162,11 +162,15 @@ let mk_ftab if_add_lt (vars : (Nt.nt, string) typed list) (cs : constant list) =
   let res = List.map (fun x -> AVar x) bvars @ mybuild_euf lits @ additional in
   res
 
-let mk_desym_ctx tyctx event_tyctx (r : raw_regex) =
+let mk_desym_ctx tyctx event_tyctx (gprop, r) =
+  let event_tyctx = Typectx.ctx_to_map event_tyctx in
+  let gavrs = TVSet.of_list @@ fv_prop gprop in
+  let global_vars =
+    List.of_seq @@ TVSet.to_seq (TVSet.union gavrs @@ get_global_vars_in_reg r)
+  in
   let if_add_lt =
     match Typectx.get_opt tyctx ">" with None -> false | Some _ -> true
   in
-  let global_vars = List.of_seq @@ TVSet.to_seq @@ get_global_vars_in_reg r in
   let constants = List.of_seq @@ ConstSet.to_seq @@ get_constant_in_reg r in
   let global_ftab = mk_ftab if_add_lt global_vars constants in
   let local_ftab =

@@ -56,7 +56,7 @@ let normalize_desym_regex (rawreg : raw_regex) =
   aux rawreg
 
 let normalize_symbolic_rawregex tyctx event_tyctx (gprop, r) =
-  let desym_ctx = mk_desym_ctx tyctx event_tyctx r in
+  let desym_ctx = mk_desym_ctx tyctx event_tyctx (gprop, r) in
   let r' = do_desym desym_ctx (gprop, r) in
   let r' = normalize_desym_regex r' in
   resym_regex desym_ctx r'
@@ -67,6 +67,6 @@ let normalize_symbolic_rawregex tyctx event_tyctx (gprop, r) =
 (*   emptiness r' *)
 
 let desymbolic_symbolic_rewregex tyctx event_tyctx (gprop, r) =
-  let desym_ctx = mk_desym_ctx tyctx event_tyctx r in
+  let desym_ctx = mk_desym_ctx tyctx event_tyctx (gprop, r) in
   let r' = do_desym desym_ctx (gprop, r) in
   r'
