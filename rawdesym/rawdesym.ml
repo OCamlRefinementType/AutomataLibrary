@@ -66,6 +66,18 @@ let normalize_symbolic_rawregex tyctx event_tyctx (gprop, r) =
 (*   let r' = do_desym desym_ctx (gprop, r) in *)
 (*   emptiness r' *)
 
+(* open Prop *)
+
+(* let serialize tyctx event_tyctx (gprop, r) = *)
+(*   let open Sexplib.Std in *)
+(*   let sexp_of_qv = sexp_of_typed Nt.sexp_of_nt sexp_of_string in *)
+(*   let s1 = *)
+(*     sexp_of_list sexp_of_qv @@ Typectx.ctx_to_list tyctx in *)
+(*   let s2 = *)
+(*     sexp_of_list (sexp_of_typed (sexp_of_list sexp_of_qv) sexp_of_string) @@ Typectx.ctx_to_list event_tyctx in *)
+(*   let s3 = sexp_of_prop Nt.sexp_of_nt gprop in *)
+(* let s4 = sexp_of_raw_regex (se) *)
+
 let desymbolic_symbolic_rewregex tyctx event_tyctx (gprop, r) =
   let desym_ctx = mk_desym_ctx tyctx event_tyctx (gprop, r) in
   let r' = do_desym desym_ctx (gprop, r) in
