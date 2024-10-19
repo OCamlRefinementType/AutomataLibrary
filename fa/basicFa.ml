@@ -494,7 +494,8 @@ module MakeBasicAutomata (C : CHARAC) = struct
     | MultiChar c1, MultiChar c2 -> MultiChar (CharSet.inter c1 c2)
     | _, _ -> Inters (a, b)
 
-  let smart_star r = match r with Empty -> Empty | Eps -> Eps | r -> Star r
+  let smart_star r =
+    match r with Empty -> Empty | Eps -> Eps | Star r -> Star r | r -> Star r
 
   (** Deriviate *)
 
