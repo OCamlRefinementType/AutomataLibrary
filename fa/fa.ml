@@ -214,6 +214,9 @@ module SFA = struct
     in
     aux regex
 
+  let omit_layout_raw_regex regex =
+    To_regex.layout_symbolic_regex @@ raw_regex_to_regex regex
+
   let unionify_sevent (dfa : dfa) =
     let ss_next = dfa_next_to_ss_next dfa in
     let f cs =
