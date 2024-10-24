@@ -179,7 +179,7 @@ module SeventLabel = struct
   type t = Nt.t sevent
 
   let compare = compare_sevent (fun _ _ -> 0)
-  let layout = pprintRaw
+  let layout = layout_se
   (* let delimit_cotexnt_char = delimit_cotexnt_se *)
 end
 
