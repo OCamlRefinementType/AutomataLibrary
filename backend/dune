@@ -1,13 +1,10 @@
 (library
- (name fa)
- (public_name AutomataLibrary.fa)
+ (name backend)
+ (public_name AutomataLibrary.backend)
  (wrapped true)
  (modules
-   basicFa
-   visualize
-   translation
-   fa
+   backend
  )
  (preprocess (pps ppx_here ppx_optcomp ppx_compare ppx_sexp_conv ppx_inline_test ppx_assert ppx_deriving.show ppx_deriving.eq ppx_deriving.ord))
- (libraries zutils core core_unix yojson dolog ocolor ppx_here regex backend)
+ (libraries zutils core core_unix yojson dolog ocolor ppx_here)
 )

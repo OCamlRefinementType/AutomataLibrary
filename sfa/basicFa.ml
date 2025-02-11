@@ -334,112 +334,6 @@ module MakeBasicAutomata (AB : ALPHABET) = struct
   let dfa_union_next next1 next2 =
     StateMap.union (fun _ m1 m2 -> Some (dfa_union_charmap m1 m2)) next1 next2
 
-  (** Complete *)
-
-  let complete_nfa (ctx : CharSet.t) (nfa : nfa) =
-    (* Add a dummy node to complete the nfa, where we just record the transitions to this node. *)
-    let max_state = ref None in
-    let update_max s =
-      match !max_state with
-      | None -> max_state := Some (Int.add s 1)
-      | Some n -> if s >= n then max_state := Some (Int.add s 1) else ()
-    in
-    let dummy_transitions = Hashtbl.create 1000 in
-    let point_to_dummy_node (s, c) =
-      (* let () = *)
-      (*   Printf.printf "### --%s-->%s\n" (C.layout c) (Int.to_string s) *)
-      (* in *)
-      match Hashtbl.find_opt dummy_transitions c with
-      | None -> Hashtbl.add dummy_transitions c (StateSet.singleton s)
-      | Some ss -> Hashtbl.replace dummy_transitions c (StateSet.add s ss)
-    in
-    let () =
-      nfa_iter_states
-        (fun state ->
-          let () = update_max state in
-          let m = nfa.next #-> state in
-          CharSet.iter
-            (fun c ->
-              match CharMap.find_opt c m with
-              | None -> point_to_dummy_node (state, c)
-              | Some _ -> ())
-            ctx)
-        nfa
-    in
-    (* reverse the nfa *)
-    if Hashtbl.length dummy_transitions == 0 then (* already complete *)
-      nfa
-    else
-      match !max_state with
-      | None -> _die [%here]
-      | Some s' ->
-          let char_map =
-            CharSet.fold (fun c -> nfa_charmap_insert c s') ctx CharMap.empty
-          in
-          let next' = StateMap.add s' char_map StateMap.empty in
-          let next' =
-            Hashtbl.fold
-              (fun c -> StateSet.fold (fun s -> nfa_next_insert s c s'))
-              dummy_transitions next'
-          in
-          {
-            start = nfa.start;
-            finals = nfa.finals;
-            next = nfa_union_next nfa.next next';
-          }
-
-  let complete_dfa (ctx : CharSet.t) (dfa : dfa) =
-    (* Add a dummy node to complete the dfa, where we just record the transitions to this node. *)
-    let max_state = ref None in
-    let update_max s =
-      match !max_state with
-      | None -> max_state := Some (Int.add s 1)
-      | Some n -> if s >= n then max_state := Some (Int.add s 1) else ()
-    in
-    let dummy_transitions = Hashtbl.create 1000 in
-    let point_to_dummy_node (s, c) =
-      (* let () = *)
-      (*   Printf.printf "### --%s-->%s\n" (C.layout c) (Int.to_string s) *)
-      (* in *)
-      match Hashtbl.find_opt dummy_transitions c with
-      | None -> Hashtbl.add dummy_transitions c (StateSet.singleton s)
-      | Some ss -> Hashtbl.replace dummy_transitions c (StateSet.add s ss)
-    in
-    let () =
-      dfa_iter_states
-        (fun state ->
-          let () = update_max state in
-          let m = dfa.next #-> state in
-          CharSet.iter
-            (fun c ->
-              match CharMap.find_opt c m with
-              | None -> point_to_dummy_node (state, c)
-              | Some _ -> ())
-            ctx)
-        dfa
-    in
-    (* reverse the dfa *)
-    if Hashtbl.length dummy_transitions == 0 then (* already complete *)
-      dfa
-    else
-      match !max_state with
-      | None -> _die [%here]
-      | Some s' ->
-          let char_map =
-            CharSet.fold (fun c -> dfa_charmap_insert c s') ctx CharMap.empty
-          in
-          let next' = StateMap.add s' char_map StateMap.empty in
-          let next' =
-            Hashtbl.fold
-              (fun c -> StateSet.fold (fun s -> dfa_next_insert s c s'))
-              dummy_transitions next'
-          in
-          {
-            start = dfa.start;
-            finals = dfa.finals;
-            next = dfa_union_next dfa.next next';
-          }
-
   let flat_map f ss =
     StateSet.fold (fun s -> StateSet.union (f s)) ss StateSet.empty
 
@@ -483,4 +377,23 @@ module MakeBasicAutomata (AB : ALPHABET) = struct
       (fun s ->
         StateMap.fold (fun d -> CharSet.fold (fun c -> dfa_next_insert s c d)))
       ss_next StateMap.empty
+
+  (** Build an NFA by reversing a DFA, inverting transition arrows,
+    turning finals states into start states, and the start state into
+    the final state *)
+  let reverse (dfa : dfa) : nfa =
+    let next =
+      dfa_fold_transitions
+        (fun (s, c, t) -> nfa_next_insert t c s)
+        dfa StateMap.empty
+    in
+    { start = dfa.finals; finals = StateSet.singleton dfa.start; next }
+
+  (** Available transitions from a set of states *)
+  let nfa_transitions states (nfa : nfa) =
+    StateSet.fold
+      (fun s m ->
+        let m' = nfa.next #-> s in
+        nfa_union_charmap m m')
+      states CharMap.empty
 end

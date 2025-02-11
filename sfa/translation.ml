@@ -1,14 +1,14 @@
 open Zutils
 open Regex
-open BasicFa
+open ExtendFa
 
-module MakeAutomataRegex (AB : ALPHABET) = struct
-  include MakeBasicAutomata (AB)
+module MakeSFARegex (AB : ALPHABET) = struct
+  include MakeExtendAutomata (AB)
   include MakeRegex (AB)
   open AB
   open Zdatatype
   module EpsC = MakeEpsC (C)
-  module EpsFA = MakeBasicAutomata (MakeAlphabet (EpsC))
+  module EpsFA = MakeExtendAutomata (MakeAlphabet (EpsC))
 
   let force_eps_nfa (nfa : nfa) : EpsFA.nfa =
     {
@@ -19,25 +19,6 @@ module MakeAutomataRegex (AB : ALPHABET) = struct
           (fun (s, c, d) m -> EpsFA.nfa_next_insert s (EpsC.CC c) d m)
           nfa StateMap.empty;
     }
-
-  (** Build an NFA by reversing a DFA, inverting transition arrows,
-    turning finals states into start states, and the start state into
-    the final state *)
-  let reverse (dfa : dfa) : nfa =
-    let next =
-      dfa_fold_transitions
-        (fun (s, c, t) -> nfa_next_insert t c s)
-        dfa StateMap.empty
-    in
-    { start = dfa.finals; finals = StateSet.singleton dfa.start; next }
-
-  (** Available transitions from a set of states *)
-  let nfa_transitions states (nfa : nfa) =
-    StateSet.fold
-      (fun s m ->
-        let m' = nfa.next #-> s in
-        nfa_union_charmap m m')
-      states CharMap.empty
 
   (** Available transitions from a set of states *)
   let eps_nfa_transitions states (nfa : EpsFA.nfa) =
@@ -140,12 +121,11 @@ module MakeAutomataRegex (AB : ALPHABET) = struct
 
   (** Brzozowski's DFA minimization algorithm:
     reverse DFA to build an NFA and determinize, then do the same again *)
-  let minimize g = determinize (reverse (determinize (reverse g)))
+  let minimize g =
+    let g = dfa_compact g in
+    determinize (reverse (determinize (reverse g)))
 
   (** Complement *)
-
-  (* let complete_dfa (ctx : CharSet.t) (dfa : dfa) = *)
-  (*   determinize @@ complete_nfa ctx @@ force_nfa dfa *)
 
   let swap_dfa (dfa : dfa) : dfa =
     let finals =
@@ -194,54 +174,11 @@ module MakeAutomataRegex (AB : ALPHABET) = struct
   let union_dfa (dfa1 : dfa) (dfa2 : dfa) : dfa =
     minimize @@ determinize @@ union_nfa (force_nfa dfa1) (force_nfa dfa2)
 
-  let intersect_dfa (dfa1 : dfa) (dfa2 : dfa) : dfa =
-    let dfa1 = normalize_dfa dfa1 in
-    let dfa2 = normalize_dfa dfa2 in
-    let num2 = num_states_dfa dfa2 in
-    let mk_p (n1 : state) (n2 : state) = Int.add n2 @@ Int.mul num2 n1 in
-    let fst_p p = Int.div p num2 in
-    let snd_p p = Int.rem p num2 in
-    let seen = Hashtbl.create 1000 in
-    let tbl = ref StateMap.empty in
-    let update_tbl (s, c, d) =
-      tbl :=
-        StateMap.update s
-          (function
-            | None -> Some (CharMap.singleton c d)
-            | Some charmap -> Some (CharMap.add c d charmap))
-          !tbl
-    in
-    let rec visit state =
-      if not (Hashtbl.mem seen state) then
-        let () = Hashtbl.add seen state () in
-        let charmap1 = dfa1.next #-> (fst_p state) in
-        let charmap2 = dfa2.next #-> (snd_p state) in
-        CharMap.iter
-          (fun c d1 ->
-            match CharMap.find_opt c charmap2 with
-            | None -> ()
-            | Some d2 ->
-                let d = mk_p d1 d2 in
-                update_tbl (state, c, d);
-                visit d)
-          charmap1
-    in
-    let start = mk_p dfa1.start dfa2.start in
-    let () = visit start in
-    let finals =
-      StateSet.fold
-        (fun s1 ->
-          StateSet.fold (fun s2 -> StateSet.add (mk_p s1 s2)) dfa2.finals)
-        dfa1.finals StateSet.empty
-    in
-    let res = { start; finals; next = !tbl } in
-    minimize res
-
   let intersect_nfa (nfa1 : nfa) (nfa2 : nfa) : nfa =
-    force_nfa @@ intersect_dfa (determinize nfa1) (determinize nfa2)
+    force_nfa @@ minimize @@ intersect_dfa (determinize nfa1) (determinize nfa2)
 
   let intersect_eps_nfa (nfa1 : EpsFA.nfa) (nfa2 : EpsFA.nfa) : EpsFA.nfa =
-    force_eps_nfa @@ force_nfa
+    force_eps_nfa @@ force_nfa @@ minimize
     @@ intersect_dfa (eps_determinize nfa1) (eps_determinize nfa2)
 
   let concat_eps_nfa (nfa1 : EpsFA.nfa) (nfa2 : EpsFA.nfa) : EpsFA.nfa =
@@ -395,34 +332,13 @@ module MakeAutomataRegex (AB : ALPHABET) = struct
     res
 
   let compile_regex_to_dfa (r : CharSet.t regex) : dfa =
+    minimize
+    @@
     match compile_regex_to_eps_nfa r with
     | None -> emp_lit_dfa
     | Some r -> eps_determinize r
 
   let mk_repeat (n, r) = seq (List.init n (fun _ -> r))
-
-  (* let regex_to_raw (regex : ('t, C.t) regex) : regex = *)
-  (*   (\* let regex = Regex.to_nnf regex in *\) *)
-  (*   let rec aux (regex : ('t, C.t) regex) : regex = *)
-  (*     match regex with *)
-  (*     | Extension _ | SyntaxSugar _ | RExpr _ -> failwith "die" *)
-  (*     | LandA (r1, r2) -> Inters (aux r1, aux r2) *)
-  (*     | DComplementA { atoms; body } -> Comple (CharSet.of_list atoms, aux body) *)
-  (*     | RepeatN (n, r) -> mk_repeat (n, aux r) *)
-  (*     | MultiAtomic l -> MultiChar (CharSet.of_list l) *)
-  (*     | EmptyA -> Empty *)
-  (*     | EpsilonA -> Eps *)
-  (*     | Atomic c -> MultiChar (CharSet.singleton c) *)
-  (*     | LorA (r1, r2) -> Alt (aux r1, aux r2) *)
-  (*     | SeqA rs -> Seq (List.map aux rs) *)
-  (*     | StarA r -> Star (aux r) *)
-  (*   in *)
-  (*   let res = aux regex in *)
-  (*   (\* let () = Printf.printf "\t\tregex: %s\n" (layout_regex res) in *\) *)
-  (*   res *)
-
-  (* let compile_regex_to_dfa (r : ('t, C.t) regex) : dfa = *)
-  (*   compile_regex_to_dfa @@ regex_to_raw r *)
 
   (** automata to regex *)
 
@@ -443,12 +359,6 @@ module MakeAutomataRegex (AB : ALPHABET) = struct
     | EqSeq (x, y) -> spf "%s %s" (layout_regex_lit x) (layout_regex_lit y)
     | EqOr l -> List.split_by " + " layout_regex_lit l
     | EqStar x -> spf "(%s)*" (layout_regex_lit x)
-
-  (* let smart_eq_or a b= *)
-  (*   match (a, b) with *)
-  (*   | EqEmp, _ -> b *)
-  (*   | _, EqEmp -> a *)
-  (*   | _, _ -> EqOr (a, b) *)
 
   let mk_equation s ss_next =
     let m = StateMap.filter_map (fun _ -> StateMap.find_opt s) ss_next in

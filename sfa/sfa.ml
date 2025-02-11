@@ -5,16 +5,9 @@ open Backend
 include BasicFa
 include Regex
 
-(* module MakeA (C : CHARAC) = struct *)
-(*   module AB = MakeAlphabet (MakeC (C)) *)
-(*   module Tmp = MakeAutomataRegex (AB) *)
-(*   include MakeAutomataDot (Tmp) *)
-(*   include Tmp *)
-(* end *)
-
 module MakeAA (C : CHARAC) = struct
   module AB = MakeAlphabet (C)
-  module Tmp = MakeAutomataRegex (AB)
+  module Tmp = MakeSFARegex (AB)
   include MakeAutomataDot (Tmp)
   include Tmp
 

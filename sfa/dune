@@ -1,12 +1,13 @@
 (library
- (name fa)
- (public_name AutomataLibrary.fa)
+ (name sfa)
+ (public_name AutomataLibrary.sfa)
  (wrapped true)
  (modules
    basicFa
+   extendFa
    visualize
    translation
-   fa
+   sfa
  )
  (preprocess (pps ppx_here ppx_optcomp ppx_compare ppx_sexp_conv ppx_inline_test ppx_assert ppx_deriving.show ppx_deriving.eq ppx_deriving.ord))
  (libraries zutils core core_unix yojson dolog ocolor ppx_here regex backend)
