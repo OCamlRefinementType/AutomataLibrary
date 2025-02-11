@@ -322,13 +322,6 @@ module MakeSFARegex (AB : ALPHABET) = struct
           | None -> Some eps_lit_eps_nfa
           | Some r -> Some (kleene_eps_nfa r))
     in
-    (* let () = Printf.printf "Compile %s to\n" (layout_regex r) in *)
-    (* let () = *)
-    (*   Printf.printf "%s\n" *)
-    (*     (match res with *)
-    (*     | None -> "{}" *)
-    (*     | Some res -> layout_dfa @@ eps_determinize res) *)
-    (* in *)
     res
 
   let compile_regex_to_dfa (r : CharSet.t regex) : dfa =
@@ -385,33 +378,6 @@ module MakeSFARegex (AB : ALPHABET) = struct
     let () = layout_equations l in
     ()
 
-  let del_in_ss_next s ss_next =
-    let self_m =
-      match StateMap.find_opt s ss_next with
-      | None -> _die [%here]
-      | Some m -> m
-    in
-    let self_char =
-      match StateMap.find_opt s self_m with None -> Eps | Some c -> Star c
-    in
-    let smart_update s r =
-      StateMap.update s (function None -> Some r | Some r' -> Some (alt r r'))
-    in
-    let ss_next =
-      StateMap.map
-        (fun m ->
-          StateMap.fold
-            (fun s' r' m' ->
-              if s != s' then smart_update s' r' m'
-              else
-                StateMap.fold
-                  (fun s'' r'' -> smart_update s'' (seq [ r'; self_char; r'' ]))
-                  self_m m')
-            m StateMap.empty)
-        ss_next
-    in
-    ss_next
-
   let print_ss_next ss_next =
     StateMap.iter
       (fun s ->
@@ -419,44 +385,79 @@ module MakeSFARegex (AB : ALPHABET) = struct
             Printf.printf "%i --[%s]--> %i\n" s (layout_regex r) s'))
       ss_next
 
+  let del_in_ss_next s ss_next =
+    match StateMap.find_opt s ss_next with
+    | None -> ss_next
+    | Some self_m ->
+        let self_char =
+          match StateMap.find_opt s self_m with None -> Eps | Some c -> star c
+        in
+        let smart_update s r =
+          StateMap.update s (function
+            | None -> Some r
+            | Some r' -> Some (alt r r'))
+        in
+        let ss_next =
+          StateMap.map
+            (fun m ->
+              StateMap.fold
+                (fun s' r' m' ->
+                  if s != s' then smart_update s' r' m'
+                  else
+                    StateMap.fold
+                      (fun s'' r'' ->
+                        smart_update s'' (seq [ r'; self_char; r'' ]))
+                      self_m m')
+                m StateMap.empty)
+            ss_next
+        in
+        ss_next
+
   let dfa_to_reg (dfa : dfa) =
     let dfa = normalize_dfa dfa in
-    if StateSet.cardinal dfa.finals == 0 then Empty
-    else
-      let n = num_states_dfa dfa in
-      let ss_next = dfa_next_to_ss_next dfa in
+    (* let () = Printf.printf "%s\n" @@ layout_dfa dfa in *)
+    (* define a automata that label regex *)
+    let n = num_states_dfa dfa in
+    let ss_next = dfa_next_to_ss_next dfa in
+    let ss_next =
+      StateMap.map (StateMap.map (fun cs -> MultiChar cs)) ss_next
+    in
+    let new_start, ss_next =
+      (* if StateSet.mem dfa.start dfa.finals then *)
       let new_start = n in
-      let new_final = n + 1 in
-      let ss_next =
-        StateMap.map (StateMap.map (fun cs -> MultiChar cs)) ss_next
-      in
-      let ss_next =
-        StateMap.add new_start (StateMap.singleton dfa.start Eps) ss_next
-      in
-      let ss_next =
-        StateSet.fold
-          (fun s ->
-            StateMap.update s (function
-              | None -> Some (StateMap.singleton new_final Eps)
-              | Some m -> Some (StateMap.add new_final Eps m)))
-          dfa.finals ss_next
-      in
+      ( new_start,
+        StateMap.add new_start (StateMap.singleton dfa.start Eps) ss_next )
+      (* else (dfa.start, ss_next) *)
+    in
+    let new_final = n + 1 in
+    let ss_next =
+      StateSet.fold
+        (fun s ->
+          StateMap.update s (function
+            | None -> Some (StateMap.singleton new_final Eps)
+            | Some m -> Some (StateMap.add new_final Eps m)))
+        dfa.finals ss_next
+    in
+    (* let () = Printf.printf "Start: %i, Final: %i\n" new_start new_final in *)
+    let rec loop i ss_next =
+      (* let () = Printf.printf "Work on %i\n" i in *)
       (* let () = print_ss_next ss_next in *)
-      let rec loop i ss_next =
-        (* let () = Printf.printf "Work on %i\n" i in *)
-        (* let () = print_ss_next ss_next in *)
-        if i == n then ss_next else loop (i + 1) (del_in_ss_next i ss_next)
-      in
-      let ss_next = loop 0 ss_next in
-      let res =
-        match StateMap.find_opt new_start ss_next with
-        | None -> _die [%here]
-        | Some m -> (
-            match StateMap.find_opt new_final m with
-            | None -> _die [%here]
-            | Some r -> r)
-      in
-      res
+      (* if i == new_start then loop (i + 1) ss_next *)
+      (* else *)
+      if i == n then ss_next else loop (i + 1) (del_in_ss_next i ss_next)
+    in
+    let ss_next = loop 0 ss_next in
+    let res =
+      match StateMap.find_opt new_start ss_next with
+      | None -> _die [%here]
+      | Some m -> (
+          match StateMap.find_opt new_final m with None -> Empty | Some r -> r)
+    in
+    res
+
+  let dfa_to_reg (dfa : dfa) =
+    let dfa = normalize_dfa dfa in
+    if StateSet.cardinal dfa.finals == 0 then Empty else dfa_to_reg dfa
 
   let regex_to_union_normal_form f (regex : CharSet.t regex) =
     let rec aux regex =

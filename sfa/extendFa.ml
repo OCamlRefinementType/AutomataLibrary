@@ -163,7 +163,7 @@ module MakeExtendAutomata (AB : ALPHABET) = struct
           (fun c1 d1 ->
             CharMap.iter
               (fun c2 d2 ->
-                match C.merge c1 c2 with
+                match C.char_inter c1 c2 with
                 | None -> ()
                 | Some c ->
                     let d = mk_p d1 d2 in

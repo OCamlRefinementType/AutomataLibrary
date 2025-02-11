@@ -10,8 +10,9 @@ module type CHARAC = sig
   include Map.OrderedType
 
   val layout : t -> string
-  val merge : t -> t -> t option
-  val subtract : t -> t -> t option
+  val char_union : t -> t -> t option
+  val char_inter : t -> t -> t option
+  val char_subtract : t -> t -> t option
   val get_name : t -> string
   (* val delimit_cotexnt_char : t list option * t -> t list *)
 end
@@ -28,7 +29,7 @@ module type ALPHABET = sig
   val add_char_to_map : char_idx -> C.t -> unit
   val id2c : char_idx -> Int64.t -> C.t
   val c2id : char_idx -> C.t -> Int64.t
-  val merge_to_set : C.t -> CharSet.t -> CharSet.t
+  val char_union_to_set : C.t -> CharSet.t -> CharSet.t
   val compact_set : CharSet.t -> CharSet.t
   val subtract_set : CharSet.t -> CharSet.t -> CharSet.t
 end
@@ -75,28 +76,30 @@ module MakeAlphabet (C : CHARAC) = struct
   let id2c { __id2c; _ } = Hashtbl.find __id2c
   let c2id { __c2id; _ } = Hashtbl.find __c2id
 
-  let _force_merge c1 c2 =
-    match C.merge c1 c2 with None -> _failatwith [%here] "die" | Some c -> c
+  let _force_char_union c1 c2 =
+    match C.char_union c1 c2 with
+    | None -> _failatwith [%here] "die"
+    | Some c -> c
 
   let _update (c : C.t) =
     StrMap.update (C.get_name c) (function
       | None -> Some c
-      | Some c' -> Some (_force_merge c' c))
+      | Some c' -> Some (_force_char_union c' c))
 
   let compact_set (s : CharSet.t) =
     let m = CharSet.fold _update s StrMap.empty in
     StrMap.fold (fun _ -> CharSet.add) m CharSet.empty
 
-  let merge_to_set (c : C.t) (s : CharSet.t) =
+  let char_union_to_set (c : C.t) (s : CharSet.t) =
     let m = CharSet.fold _update s StrMap.empty in
     let m = _update c m in
     StrMap.fold (fun _ -> CharSet.add) m CharSet.empty
 
-  let subtract_char_from_set (c : C.t) (s : CharSet.t) =
-    CharSet.filter_map (fun c' -> C.subtract c' c) s
+  let char_subtract_char_from_set (c : C.t) (s : CharSet.t) =
+    CharSet.filter_map (fun c' -> C.char_subtract c' c) s
 
   let subtract_set (s1 : CharSet.t) (s2 : CharSet.t) =
-    CharSet.fold subtract_char_from_set s2 s1
+    CharSet.fold char_subtract_char_from_set s2 s1
 end
 
 module MakeEpsC (C : CHARAC) = struct
@@ -106,18 +109,26 @@ module MakeEpsC (C : CHARAC) = struct
   let layout = function CEps -> "eps" | CC c -> C.layout c
   let get_name = function CEps -> _nop | CC c -> C.get_name c
 
-  let merge se1 se2 =
+  let char_union se1 se2 =
     match (se1, se2) with
     | CEps, CEps -> Some CEps
     | CC c1, CC c2 ->
-        let* c = C.merge c1 c2 in
+        let* c = C.char_union c1 c2 in
         Some (CC c)
     | _, _ -> None
 
-  let subtract c1 c2 =
+  let char_inter se1 se2 =
+    match (se1, se2) with
+    | CEps, CEps -> Some CEps
+    | CC c1, CC c2 ->
+        let* c = C.char_inter c1 c2 in
+        Some (CC c)
+    | _, _ -> None
+
+  let char_subtract c1 c2 =
     match (c1, c2) with
     | CC c1, CC c2 ->
-        let* c = C.subtract c1 c2 in
+        let* c = C.char_subtract c1 c2 in
         Some (CC c)
     | _, _ -> None
 end
@@ -127,8 +138,9 @@ module CharC = struct
 
   let layout x = spf "%c" x
   let get_name = layout
-  let merge c1 c2 = if Char.equal c1 c2 then Some c1 else None
-  let subtract c1 c2 = if Char.equal c1 c2 then None else Some c1
+  let char_union c1 c2 = if Char.equal c1 c2 then Some c1 else None
+  let char_inter = char_union
+  let char_subtract c1 c2 = if Char.equal c1 c2 then None else Some c1
 end
 
 module StringC = struct
@@ -136,8 +148,9 @@ module StringC = struct
 
   let layout x = x
   let get_name = layout
-  let merge c1 c2 = if String.equal c1 c2 then Some c1 else None
-  let subtract c1 c2 = if String.equal c1 c2 then None else Some c1
+  let char_union c1 c2 = if String.equal c1 c2 then Some c1 else None
+  let char_inter = char_union
+  let char_subtract c1 c2 = if String.equal c1 c2 then None else Some c1
 end
 
 module Int64C = struct
@@ -145,8 +158,9 @@ module Int64C = struct
 
   let layout = to_string
   let get_name = layout
-  let merge c1 c2 = if Int64.equal c1 c2 then Some c1 else None
-  let subtract c1 c2 = if Int64.equal c1 c2 then None else Some c1
+  let char_union c1 c2 = if Int64.equal c1 c2 then Some c1 else None
+  let char_inter = char_union
+  let char_subtract c1 c2 = if Int64.equal c1 c2 then None else Some c1
 end
 
 module DesymLabel = struct
@@ -154,8 +168,9 @@ module DesymLabel = struct
 
   let layout (op, id) = op ^ ":" ^ string_of_int id
   let get_name = layout
-  let merge c1 c2 = if equal c1 c2 then Some c1 else None
-  let subtract c1 c2 = if equal c1 c2 then None else Some c1
+  let char_union c1 c2 = if equal c1 c2 then Some c1 else None
+  let char_inter = char_union
+  let char_subtract c1 c2 = if equal c1 c2 then None else Some c1
 end
 
 open Sv
@@ -167,13 +182,19 @@ module SymLabel = struct
   let layout se = layout_se se
   let get_name se = se.op
 
-  let merge se1 se2 =
+  let char_union se1 se2 =
     let open Prop in
     if String.equal se1.op se2.op then
-      Some { se1 with phi = smart_add_to se1.phi se2.phi }
+      Some { se1 with phi = smart_or [ se1.phi; se2.phi ] }
     else None
 
-  let subtract se1 se2 =
+  let char_inter se1 se2 =
+    let open Prop in
+    if String.equal se1.op se2.op then
+      Some { se1 with phi = smart_and [ se1.phi; se2.phi ] }
+    else None
+
+  let char_subtract se1 se2 =
     let open Prop in
     if String.equal se1.op se2.op then
       Some { se1 with phi = smart_add_to se1.phi (smart_not se2.phi) }

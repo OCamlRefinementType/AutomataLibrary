@@ -102,55 +102,6 @@ module SFA = struct
   include MakeAA (SymLabel)
   open Zdatatype
 
-  let raw_regex_to_regex regex =
-    let rec aux = function
-      | Empty -> EmptyA
-      | Eps -> EpsilonA
-      | MultiChar cs -> MultiAtomic (List.of_seq @@ CharSet.to_seq cs)
-      | Alt (r1, r2) -> LorA (aux r1, aux r2)
-      | Inters (r1, r2) -> LandA (aux r1, aux r2)
-      | Comple (cs, r2) ->
-          DComplementA
-            { atoms = List.of_seq @@ CharSet.to_seq cs; body = aux r2 }
-      | Seq rs -> SeqA (List.map aux rs)
-      | Star r -> StarA (aux r)
-    in
-    aux regex
-
-  let omit_layout_raw_regex regex =
-    layout_symbolic_regex @@ raw_regex_to_regex regex
-
-  let unionify_sevent (dfa : dfa) =
-    let ss_next = dfa_next_to_ss_next dfa in
-    let f cs =
-      let m =
-        CharSet.fold
-          (fun se ->
-            let { op; vs; phi } = se in
-            StrMap.update op (function
-              | None -> Some (vs, phi)
-              | Some (_, phi') -> Some (vs, smart_or [ phi; phi' ])))
-          cs StrMap.empty
-      in
-      StrMap.fold
-        (fun op (vs, phi) -> CharSet.add { op; vs; phi })
-        m CharSet.empty
-    in
-    let ss_next = StateMap.map (StateMap.map f) ss_next in
-    let next = ss_next_to_next ss_next in
-    let sfa = { start = dfa.start; finals = dfa.finals; next } in
-    (* let () = Pp.printf "\n@{<bold>before normalize:@}\n%s\n" (layout_dfa sfa) in *)
-    normalize_dfa sfa
-
-  let from_desym_dfa (f : DesymFA.CharSet.t -> CharSet.t) (dfa : DesymFA.dfa) :
-      dfa =
-    let ss_next = DesymFA.dfa_next_to_ss_next dfa in
-    let ss_next = StateMap.map (StateMap.map f) ss_next in
-    let next = ss_next_to_next ss_next in
-    let sfa = { start = dfa.start; finals = dfa.finals; next } in
-    (* let () = Pp.printf "\n@{<bold>before normalize:@}\n%s\n" (layout_dfa sfa) in *)
-    normalize_dfa sfa
-
   let rename_sevent event_ctx (dfa : dfa) =
     let f = function
       | { op; vs; phi } ->
@@ -160,18 +111,6 @@ module SFA = struct
             | None -> _die_with [%here] (spf "die: None on %s" op)
             | Some ty -> _die_with [%here] (spf "die: %s" (Nt.layout ty))
           in
-          (* let () = *)
-          (*   Printf.printf "vs: %s\n" *)
-          (*   @@ List.split_by_comma *)
-          (*        (fun x -> spf "%s:%s" x.x (Nt.layout x.ty)) *)
-          (*        vs *)
-          (* in *)
-          (* let () = *)
-          (*   Printf.printf "vs': %s\n" *)
-          (*   @@ List.split_by_comma *)
-          (*        (fun x -> spf "%s:%s" x.x (Nt.layout x.ty)) *)
-          (*        vs' *)
-          (* in *)
           let phi' =
             List.fold_right
               (fun (v, v') -> subst_prop_instance v.x (AVar v'))
@@ -180,25 +119,6 @@ module SFA = struct
           { op; vs = vs'; phi = phi' }
     in
     dfa_map_c f dfa
-
-  let unify_se cs =
-    let m =
-      CharSet.fold
-        (fun se m ->
-          match se with
-          | { op; vs; phi } ->
-              StrMap.update op
-                (function
-                  | None -> Some (vs, phi)
-                  | Some (vs', phi') -> Some (vs', smart_or [ phi; phi' ]))
-                m)
-        cs StrMap.empty
-    in
-    StrMap.fold
-      (fun op (vs, phi) -> CharSet.add { op; vs; phi })
-      m CharSet.empty
-
-  let unify_raw_regex reg = raw_reg_map unify_se reg
 end
 
 let symbolic_dfa_to_event_name_dfa (dfa : SFA.dfa) =

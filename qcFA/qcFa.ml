@@ -284,24 +284,64 @@ let qc_test_dfa_to_unf_2 (num_regex : int) =
 
 (* let%test _ = qc_test_compile_complement_2 10 30 *)
 (* let%test _ = qc_test_fa_complement 10 30 *)
-(* let%test _ = qc_test_compile_regex_to_dfa_3 200 30 *)
-let%test _ =
-  let r =
-    Seq
-      [
-        Comple
-          (space, Seq [ Eps; MultiChar (CharSet.of_list [ 'a'; 'b'; 'd' ]) ]);
-        Inters (MultiChar (CharSet.of_list [ 'b'; 'c' ]), Eps);
-        MultiChar (CharSet.of_list [ 'b'; 'd' ]);
-      ]
-  in
-  let () = Printf.printf "r: %s\n" @@ layout_regex r in
-  let fa = DFA (compile_regex_to_dfa r) in
-  let () = Printf.printf "fa:\n%s\n" (layout fa) in
-  let str = List.of_seq @@ String.to_seq "bdbdbbbccd" in
-  let () = Printf.printf "r match: %b\n" (is_match Char.equal r str) in
-  let () = Printf.printf "fa accept: %b\n" (accept fa str) in
-  test_regex_fa_3 10000 r
+let%test _ = qc_test_compile_regex_to_dfa_3 200 30
+(* let%test _ = *)
+(*   let r = *)
+(*     Seq *)
+(*       [ *)
+(*         Comple *)
+(*           (space, Seq [ Eps; MultiChar (CharSet.of_list [ 'a'; 'b'; 'd' ]) ]); *)
+(*         Inters (MultiChar (CharSet.of_list [ 'b'; 'c' ]), Eps); *)
+(*         MultiChar (CharSet.of_list [ 'b'; 'd' ]); *)
+(*       ] *)
+(*   in *)
+(*   let () = Printf.printf "r: %s\n" @@ layout_regex r in *)
+(*   let fa = DFA (compile_regex_to_dfa r) in *)
+(*   let () = Printf.printf "fa:\n%s\n" (layout fa) in *)
+(*   let str = List.of_seq @@ String.to_seq "bdbdbbbccd" in *)
+(*   let () = Printf.printf "r match: %b\n" (is_match Char.equal r str) in *)
+(*   let () = Printf.printf "fa accept: %b\n" (accept fa str) in *)
+(*   test_regex_fa_3 10000 r *)
 
 (* let%test _ = *)
 (*   let dfa = compile_regex_to_dfa (Seq [Mul]) in *)
+
+open Sgen
+open Prop
+open SFA
+
+let _do_test r =
+  let fa = compile_regex_to_dfa r in
+  let r' = dfa_to_reg fa in
+  let fa = dfa_realize (fun { phi; _ } -> Prover.check_sat_bool phi) fa in
+  (* let () = Printf.printf "fa:\n%s\n\n" (layout_dfa fa) in *)
+  let fa = normalize_dfa fa in
+  (* let () = Printf.printf "fa:\n%s\n\n" (layout_dfa fa) in *)
+  (* let () = failwith "end" in *)
+  let r'' = dfa_to_reg fa in
+  let () = Printf.printf "original:\n%s\n" (layout_regex r) in
+  let () = Printf.printf "minimalize:\n%s\n" (layout_regex r') in
+  let () = Printf.printf "realize:\n%s\n\n" (layout_regex r'') in
+  ()
+
+let testcase () =
+  let regexs = QCheck.Gen.generate ~n:10 regex_gen in
+  let () = List.iter _do_test regexs in
+  false
+
+let testcase1 () =
+  let r =
+    star
+      (MultiChar
+         (CharSet.of_list
+            [ op_phi_to_se "a" mk_false; op_phi_to_se "a" mk_true ]))
+  in
+  let regexs = [ r ] in
+  let () = List.iter _do_test regexs in
+  false
+
+let testcase2 () =
+  let r = MultiChar (CharSet.of_list [ op_phi_to_se "a" mk_false ]) in
+  let regexs = [ r ] in
+  let () = List.iter _do_test regexs in
+  false

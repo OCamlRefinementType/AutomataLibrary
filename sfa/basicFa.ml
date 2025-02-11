@@ -240,7 +240,7 @@ module MakeBasicAutomata (AB : ALPHABET) = struct
       next = StateMap.map (CharMap.map StateSet.singleton) next;
     }
 
-  let normalize_nfa (nfa : nfa) : nfa =
+  let normalize_nfa_aux (nfa : nfa) =
     let state_naming = ref StateMap.empty in
     let next_state = ref _default_init_state in
     let incr () =
@@ -254,15 +254,19 @@ module MakeBasicAutomata (AB : ALPHABET) = struct
       | None -> state_naming := StateMap.add s (incr ()) !state_naming
     in
     let () = nfa_iter_states (fun s -> do_state_renaming s) nfa in
+    let () = StateSet.iter do_state_renaming nfa.finals in
     let f s =
-      (* NOTE: if there is unreachable final states, maps to 0 *)
       match StateMap.find_opt s !state_naming with
       | Some s' -> s'
-      | None -> _default_init_state
+      | None -> failwith "die"
     in
+    (f, !next_state)
+
+  let normalize_nfa (nfa : nfa) : nfa =
+    let f, _ = normalize_nfa_aux nfa in
     nfa_map_state f nfa
 
-  let normalize_dfa (dfa : dfa) : dfa =
+  let normalize_dfa_aux (dfa : dfa) =
     let state_naming = ref StateMap.empty in
     let next_state = ref _default_init_state in
     let incr () =
@@ -275,17 +279,21 @@ module MakeBasicAutomata (AB : ALPHABET) = struct
       | Some _ -> ()
       | None -> state_naming := StateMap.add s (incr ()) !state_naming
     in
-    let () = dfa_iter_states (fun s -> do_state_renaming s) dfa in
+    let () = dfa_iter_states do_state_renaming dfa in
+    let () = StateSet.iter do_state_renaming dfa.finals in
     let f s =
-      (* NOTE: if there is unreachable final states, maps to 0 *)
       match StateMap.find_opt s !state_naming with
       | Some s' -> s'
-      | None -> _default_init_state
+      | None -> failwith "die"
     in
+    (f, !next_state)
+
+  let normalize_dfa (dfa : dfa) : dfa =
+    let f, _ = normalize_dfa_aux dfa in
     dfa_map_state f dfa
 
-  let num_states_nfa (nfa : nfa) = nfa_fold_states (fun _ x -> x + 1) nfa 0
-  let num_states_dfa (dfa : dfa) = dfa_fold_states (fun _ x -> x + 1) dfa 0
+  let num_states_nfa (nfa : nfa) = snd @@ normalize_nfa_aux nfa
+  let num_states_dfa (dfa : dfa) = snd @@ normalize_dfa_aux dfa
 
   let num_transition_nfa (nfa : nfa) =
     nfa_fold_transitions (fun _ x -> x + 1) nfa 0

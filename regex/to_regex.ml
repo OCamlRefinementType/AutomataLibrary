@@ -116,8 +116,10 @@ let rec pprint_aux layout_ty layout_label = function
   | EmptyA -> ("∅", true)
   | EpsilonA -> ("ϵ", true)
   | Atomic se -> (layout_label se, true)
-  | MultiAtomic atoms ->
-      (spf "[%s]" (List.split_by " " layout_label atoms), true)
+  | MultiAtomic atoms -> (
+      match atoms with
+      | [ x ] -> (layout_label x, true)
+      | _ -> (spf "[%s]" (List.split_by " " layout_label atoms), true))
   | LorA (a1, a2) ->
       ( spf "%s%s%s"
           (p_pprint layout_ty layout_label a1)

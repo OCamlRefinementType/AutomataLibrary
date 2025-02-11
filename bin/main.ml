@@ -1,0 +1,3 @@
+open AutomataLibrary;;
+
+QcFa.testcase ()
