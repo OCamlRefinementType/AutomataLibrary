@@ -38,7 +38,7 @@ let get_op expr = match get_opopt expr with Some x -> x | None -> _die [%here]
 
 let get_self ct =
   match ct.ptyp_desc with
-  | Ptyp_extension (name, PTyp ty) -> name.txt #: (Nt.core_type_to_t ty)
+  | Ptyp_extension (name, PTyp ty) -> name.txt#:(Nt.core_type_to_t ty)
   | _ ->
       let () = Printf.printf "\nct: %s\n" (Oparse.string_of_core_type ct) in
       _die_with [%here] ""
@@ -76,7 +76,7 @@ let desugar_sevent expr =
                 let arg' = untyped @@ AVar arg in
                 let x = untyped @@ AVar x in
                 let lit = AAppOp (untyped "==", [ arg'; x ]) in
-                (arg, Some (Lit lit #: Ty_bool))
+                (arg, Some (Lit lit#:Nt.bool_ty))
             | _ -> _die [%here])
           es
       in

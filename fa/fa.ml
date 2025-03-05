@@ -52,7 +52,7 @@ module MakeAutomataDot (FA : FINITE_AUTOMATA) = struct
                 add_edge state c target;
                 step target)
               targets)
-          nfa.next #-> state)
+          nfa.next#->state)
     in
     StateSet.iter step nfa.start;
     (* Empty node to the left of the start state *)
@@ -120,12 +120,13 @@ module MakeAA (C : CHARAC) = struct
   let display_dfa sfa =
     let () = save_dfa_as_digraph sfa _tmp_dot_path in
     let () = Out_channel.(flush stdout) in
-    (* let () = UnixLabels.sleep 1 in *)
-    (* let ch = Core_unix.open_process_out "ls" in *)
-    (* Core_unix.(close_process_out ch) *)
-    Core_unix.(
-      close_process_out @@ open_process_out
-      @@ spf "cat %s | dot -Tpng | imgcat" _tmp_dot_path)
+    Stdlib.Sys.command (spf "cat %s | dot -Tpng | imgcat" _tmp_dot_path)
+  (* let () = UnixLabels.sleep 1 in *)
+  (* let ch = Core_unix.open_process_out "ls" in *)
+  (* Core_unix.(close_process_out ch) *)
+  (* Unix.( *)
+  (*   close_process_out @@ open_process_out *)
+  (*   @@ spf "cat %s | dot -Tpng | imgcat" _tmp_dot_path) *)
 end
 
 module CharAutomata = MakeAA (CharC)
