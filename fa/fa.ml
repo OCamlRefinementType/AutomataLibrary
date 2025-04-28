@@ -224,14 +224,14 @@ module SFA = struct
       let m =
         CharSet.fold
           (fun se ->
-            let { op; vs; phi } = se in
+            let { op; event_ty; phi } = se in
             StrMap.update op (function
-              | None -> Some (vs, phi)
-              | Some (_, phi') -> Some (vs, smart_or [ phi; phi' ])))
+              | None -> Some (event_ty, phi)
+              | Some (_, phi') -> Some (event_ty, smart_or [ phi; phi' ])))
           cs StrMap.empty
       in
       StrMap.fold
-        (fun op (vs, phi) -> CharSet.add { op; vs; phi })
+        (fun op (event_ty, phi) -> CharSet.add { op; event_ty; phi })
         m CharSet.empty
     in
     let ss_next = StateMap.map (StateMap.map f) ss_next in
@@ -249,51 +249,21 @@ module SFA = struct
     (* let () = Pp.printf "\n@{<bold>before normalize:@}\n%s\n" (layout_dfa sfa) in *)
     normalize_dfa sfa
 
-  let rename_sevent event_ctx (dfa : dfa) =
-    let f = function
-      | { op; vs; phi } ->
-          let vs' =
-            match StrMap.find_opt event_ctx op with
-            | Some (Nt.Ty_record l) -> l
-            | None -> _die_with [%here] (spf "die: None on %s" op)
-            | Some ty -> _die_with [%here] (spf "die: %s" (Nt.layout ty))
-          in
-          (* let () = *)
-          (*   Printf.printf "vs: %s\n" *)
-          (*   @@ List.split_by_comma *)
-          (*        (fun x -> spf "%s:%s" x.x (Nt.layout x.ty)) *)
-          (*        vs *)
-          (* in *)
-          (* let () = *)
-          (*   Printf.printf "vs': %s\n" *)
-          (*   @@ List.split_by_comma *)
-          (*        (fun x -> spf "%s:%s" x.x (Nt.layout x.ty)) *)
-          (*        vs' *)
-          (* in *)
-          let phi' =
-            List.fold_right
-              (fun (v, v') -> subst_prop_instance v.x (AVar v'))
-              (List.combine vs vs') phi
-          in
-          { op; vs = vs'; phi = phi' }
-    in
-    dfa_map_c f dfa
-
   let unify_se cs =
     let m =
       CharSet.fold
         (fun se m ->
           match se with
-          | { op; vs; phi } ->
+          | { op; event_ty; phi } ->
               StrMap.update op
                 (function
-                  | None -> Some (vs, phi)
+                  | None -> Some (event_ty, phi)
                   | Some (vs', phi') -> Some (vs', smart_or [ phi; phi' ]))
                 m)
         cs StrMap.empty
     in
     StrMap.fold
-      (fun op (vs, phi) -> CharSet.add { op; vs; phi })
+      (fun op (event_ty, phi) -> CharSet.add { op; event_ty; phi })
       m CharSet.empty
 
   let unify_raw_regex reg = raw_reg_map unify_se reg

@@ -1,5 +1,6 @@
 open Zutils
 open OcamlParser
+open Oparse
 open Parsetree
 open Zdatatype
 open RegexTree
@@ -8,24 +9,17 @@ open Prop
 let tpEvent str = spf "⟨%s⟩" str
 
 let pprint = function
-  | { op; phi; vs } ->
+  | { op; phi; _ } ->
       if is_true phi then tpEvent op
-      else
-        tpEvent
-        @@ spf "%s %s | %s" op
-             (List.split_by " " (fun x -> x.x) vs)
-             (layout_prop phi)
+      else tpEvent @@ spf "%s %s | %s" op default_e (layout_prop phi)
 
 let layout_se = pprint
 let layout = pprint
-let tpEventRaw str = spf "<%s>" str
+(* let tpEventRaw str = spf "<%s>" str *)
 
 let pprintRaw = function
-  | { op; phi; vs } ->
-      tpEventRaw
-      @@ spf "%s %s | %s" op
-           (List.split_by " " (fun x -> x.x) vs)
-           (layout_propRaw phi)
+  | { op; phi; _ } ->
+      tpEvent @@ spf "%s %s | %s" op default_e (layout_propRaw phi)
 
 let layout_se_precise = pprintRaw
 
@@ -57,46 +51,22 @@ let vars_phi_sevent_of_expr expr =
 
 let desugar_sevent expr =
   match expr.pexp_desc with
-  | Pexp_tuple es ->
-      let es, ephi =
-        match List.last_destruct_opt es with
-        | Some (es, ephi) -> (es, ephi)
-        | None -> _die [%here]
-      in
+  | Pexp_tuple [ e; ephi ] ->
       let phi = prop_of_expr ephi in
-      let es =
-        List.map
-          (fun e ->
-            let x = typed_id_of_expr e in
-            match get_denoteopt e with
-            | None -> (x, None)
-            | Some "d" ->
-                let open Nt in
-                let arg = untyped @@ Rename.unique "x" in
-                let arg' = untyped @@ AVar arg in
-                let x = untyped @@ AVar x in
-                let lit = AAppOp (untyped "==", [ arg'; x ]) in
-                (arg, Some (Lit lit#:Nt.bool_ty))
-            | _ -> _die [%here])
-          es
-      in
-      let args = List.map fst es in
-      let phis =
-        List.fold_left
-          (fun res (_, prop) ->
-            match prop with None -> res | Some prop -> prop :: res)
-          [ phi ] es
-      in
-      (args, And phis)
-  | _ -> ([], prop_of_expr expr)
+      let x = typed_id_of_expr e in
+      if String.equal x.x default_e then _die [%here];
+      (x.ty, phi)
+  | _ -> _die [%here]
 
 let sevent_of_expr_aux expr =
   match expr.pexp_desc with
-  | Pexp_construct (op, Some e) ->
+  | Pexp_construct (op, Some e) -> (
       (* symbolic operator event *)
       let op = String.uncapitalize_ascii @@ longid_to_id op in
-      let vs, phi = desugar_sevent e in
-      { op; vs; phi }
+      match vars_phi_sevent_of_expr e with
+      | [ { x; ty = event_ty } ], phi when String.equal x default_e ->
+          { op; event_ty; phi }
+      | _ -> _failatwith [%here] (string_of_expression e))
   | _ ->
       let () =
         Printf.printf "unknown symbolic event: %s\n"
@@ -111,12 +81,3 @@ let sevent_of_expr expr =
   rty
 
 let of_expr = sevent_of_expr
-
-let locally_rename_se ctx = function
-  | { op; phi; _ } ->
-      let vs =
-        match List.find_opt (fun x -> String.equal op x.x) ctx with
-        | None -> _die_with [%here] (spf "cannot find type of %s" op)
-        | Some vs -> vs.ty
-      in
-      { op; vs; phi }

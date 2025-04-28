@@ -9,7 +9,7 @@ open To_sevent
 
 let var_or_c_of_expr expr =
   match expr.pexp_desc with
-  | Pexp_ident id -> RVar (longid_to_id id) #: Nt.Ty_unknown
+  | Pexp_ident id -> RVar (longid_to_id id)#:Nt.Ty_unknown
   | _ -> RConst (expr_to_constant expr)
 
 let of_expr_aux label_of_expr expr =
@@ -33,9 +33,9 @@ let of_expr_aux label_of_expr expr =
         in
         let qv =
           match q with
-          | FA -> qv.x #: (RForall qvty)
-          | EX -> qv.x #: (RExists qvty)
-          | PI -> qv.x #: (RPi qvty)
+          | FA -> qv.x#:(RForall qvty)
+          | EX -> qv.x#:(RExists qvty)
+          | PI -> qv.x#:(RPi qvty)
         in
         RExpr (QFRegex { qv; body })
     | Pexp_apply (func, args) -> (
@@ -90,7 +90,7 @@ let of_expr_aux label_of_expr expr =
             let mk_apply func arg = RExpr (RApp { func; arg }) in
             List.fold_left mk_apply func args)
     | Pexp_let (_, [ v ], body) ->
-        let lhs = (id_of_pattern v.pvb_pat) #: Nt.Ty_unknown in
+        let lhs = (id_of_pattern v.pvb_pat)#:Nt.Ty_unknown in
         let rhs = var_or_c_of_expr v.pvb_expr in
         RExpr (RLet { lhs; rhs; body = aux body })
     | Pexp_sequence _ -> SeqA (parse_seq expr)
@@ -101,7 +101,7 @@ let of_expr_aux label_of_expr expr =
         | "emptyA" -> EmptyA
         | "anyA" -> Extension AnyA
         | "allA" -> mk_all
-        | _ -> RExpr (RVar id #: Nt.Ty_unknown))
+        | _ -> RExpr (RVar id#:Nt.Ty_unknown))
     | Pexp_constant _ | Pexp_array _ -> RExpr (RConst (expr_to_constant expr))
     | _ -> Atomic (label_of_expr expr)
   and parse_seq expr =
@@ -238,55 +238,3 @@ let layout_symbolic_regex_precise regex =
 let layout_desym_regex regex = layout Nt.layout DesymLabel.layout regex
 let str_regex_of_expr = of_expr id_of_expr
 let symbolic_regex_of_expr = of_expr sevent_of_expr
-
-let rec locally_rename ctx regex =
-  match regex with
-  | EmptyA | EpsilonA -> regex
-  | Atomic se -> Atomic (locally_rename_se ctx se)
-  | MultiAtomic atoms -> MultiAtomic (List.map (locally_rename_se ctx) atoms)
-  | LorA (a1, a2) -> LorA (locally_rename ctx a1, locally_rename ctx a2)
-  | LandA (a1, a2) -> LandA (locally_rename ctx a1, locally_rename ctx a2)
-  | SeqA rs -> SeqA (List.map (locally_rename ctx) rs)
-  | StarA a -> StarA (locally_rename ctx a)
-  | DComplementA { atoms; body } ->
-      DComplementA
-        {
-          atoms = List.map (locally_rename_se ctx) atoms;
-          body = locally_rename ctx body;
-        }
-  | RepeatN (x, r) -> RepeatN (x, locally_rename ctx r)
-  | Extension r -> Extension (locally_rename_extension ctx r)
-  | SyntaxSugar r -> SyntaxSugar (locally_rename_sugar ctx r)
-  | RExpr r -> RExpr (locally_rename_expr ctx r)
-
-and locally_rename_extension ctx = function
-  | ComplementA a -> ComplementA (locally_rename ctx a)
-  | AnyA -> AnyA
-  | Ctx { atoms; body } ->
-      Ctx
-        {
-          atoms = List.map (locally_rename_se ctx) atoms;
-          body = locally_rename ctx body;
-        }
-
-and locally_rename_sugar ctx = function
-  | CtxOp { op_names; body } ->
-      CtxOp { op_names; body = locally_rename ctx body }
-  | SetMinusA (a1, a2) ->
-      SetMinusA (locally_rename ctx a1, locally_rename ctx a2)
-
-and locally_rename_expr ctx = function
-  | RRegex r -> RRegex (locally_rename ctx r)
-  | RConst c -> RConst c
-  | RVar x -> RVar x
-  | RApp { func; arg } ->
-      RApp { func = locally_rename ctx func; arg = locally_rename_expr ctx arg }
-  | RLet { lhs; rhs; body } ->
-      RLet
-        {
-          lhs;
-          rhs = locally_rename_expr ctx rhs;
-          body = locally_rename ctx body;
-        }
-  | Repeat (x, r) -> Repeat (x, locally_rename ctx r)
-  | QFRegex { qv; body } -> QFRegex { qv; body = locally_rename ctx body }
