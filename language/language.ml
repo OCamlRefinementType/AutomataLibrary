@@ -43,5 +43,3 @@ include Regex
 (*   (\* in *\) *)
 (*   (\* let () = _die [%here] in *\) *)
 (*   (bctx, items) *)
-
-let%test "parse_symbolic_regex" = false
