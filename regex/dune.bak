@@ -1,22 +1,15 @@
 (library
- (name fa)
- (public_name AutomataLibrary.fa)
+ (name regex)
+ (public_name AutomataLibrary.regex)
  (wrapped true)
  (modules
-   sevent
-   to_sevent
-   common
-   basicFa
-   regexTree
+   ast
+   astAux
+   translate
    regex
-   translation
-   ; arden
-   backend
    to_regex
-   normal_sevent_typing
    normal_regex_typing
-   fa
  )
  (preprocess (pps ppx_here ppx_optcomp ppx_compare ppx_sexp_conv ppx_inline_test ppx_assert ppx_deriving.show ppx_deriving.eq ppx_deriving.ord))
- (libraries zutils core yojson dolog ocolor ppx_here)
+ (libraries zutils core core_unix yojson dolog ocolor ppx_here sevent)
 )

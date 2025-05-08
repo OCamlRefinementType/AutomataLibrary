@@ -1,113 +1,43 @@
 open Zutils
 open Translation
+open Visualize
 open Backend
-include Common
 include BasicFa
 include Regex
-include To_sevent
-include To_regex
 
-module MakeAutomataDot (FA : FINITE_AUTOMATA) = struct
-  open FA
-  module CharSet = Set.Make (C)
-
-  let edge_name s =
-    match CharSet.cardinal s with
-    | 0 -> "{}"
-    | 1 -> C.layout (CharSet.choose s)
-    | _ ->
-        "{" ^ String.concat " " (List.map C.layout (CharSet.elements s)) ^ "}"
-
-  let digraph_of_nfa : nfa -> Digraph.t =
-   fun (nfa : nfa) ->
-    let states = Hashtbl.create 10 in
-    let edges = Hashtbl.create 10 in
-    let make_node =
-      let counter = ref 0 in
-      fun n ->
-        let name = string_of_int !counter in
-        incr counter;
-        let node = Digraph.Node.make ~id:name in
-        let shape =
-          if StateSet.mem n nfa.finals then "doublecircle" else "circle"
-        in
-        Digraph.Node.with_attrs node [ ("shape", shape) ]
-    in
-    let add_edge source c target =
-      Hashtbl.replace edges (source, target)
-      @@
-      match Hashtbl.find edges (source, target) with
-      | exception Not_found -> CharSet.singleton c
-      | set -> CharSet.add c set
-    in
-    let rec step state =
-      (* Accumulate nodes and edges, using the states/edges tables as
-         'seen lists' to ensure each node and edge is only visited once *)
-      if not (Hashtbl.mem states state) then (
-        Hashtbl.add states state (make_node state);
-        CharMap.iter
-          (fun c targets ->
-            StateSet.iter
-              (fun target ->
-                add_edge state c target;
-                step target)
-              targets)
-          nfa.next#->state)
-    in
-    StateSet.iter step nfa.start;
-    (* Empty node to the left of the start state *)
-    let input =
-      Digraph.Node.with_attrs (Digraph.Node.make ~id:"")
-        [ ("shape", "none"); ("width", "0") ]
-    in
-    (* Initial empty digraph *)
-    let dg =
-      Digraph.with_node
-        (Digraph.with_attrs Digraph.empty [ ("rankdir", "LR") ])
-        input
-    in
-    (* Add the state nodes *)
-    let dg =
-      Hashtbl.fold (fun _ node dg -> Digraph.with_node dg node) states dg
-    in
-    (* Add the initial edges *)
-    let dg =
-      StateSet.fold
-        (fun s dg -> Digraph.with_edge dg (input, Hashtbl.find states s))
-        nfa.start dg
-    in
-    (* Add the other edges *)
-    Hashtbl.fold
-      (fun (source, target) s dg ->
-        Digraph.with_edge dg
-          ~attrs:[ ("label", edge_name s); ("fontsize", "10") ]
-          (Hashtbl.find states source, Hashtbl.find states target))
-      edges dg
-end
-
-module MakeA (C : CHARAC) = struct
-  module Tmp = MakeAutomata (MakeC (C))
-  include MakeAutomataDot (Tmp)
-  include Tmp
-end
+(* module MakeA (C : CHARAC) = struct *)
+(*   module AB = MakeAlphabet (MakeC (C)) *)
+(*   module Tmp = MakeAutomataRegex (AB) *)
+(*   include MakeAutomataDot (Tmp) *)
+(*   Include Tmp *)
+(* end *)
 
 module MakeAA (C : CHARAC) = struct
-  include MakeA (C)
+  module AB = MakeAlphabet (C)
+  module Tmp = MakeAutomataRegex (AB)
+  include MakeAutomataDot (Tmp)
+  include Tmp
 
   let _tmp_dot_path = ".tmp.dot"
 
-  let index_regex (regex : ('t, C.t) regex) : C.char_idx =
-    let m = C.init_char_map () in
-    let () = iter_label_in_regex (C.add_char_to_map m) regex in
+  let index_regex (regex : CharSet.t regex) : AB.char_idx =
+    let m = AB.init_char_map () in
+    let () = iter_label_in_regex (CharSet.iter (AB.add_char_to_map m)) regex in
     m
 
-  let to_index_regex (m : C.char_idx) (regex : ('t, C.t) regex) :
-      ('t, Int64.t) regex =
-    map_label_in_regex (C.c2id m) regex
+  let to_index_regex (m : AB.char_idx) (regex : CharSet.t regex) :
+      Int64Set.t regex =
+    map_label_in_regex
+      (fun s ->
+        CharSet.fold (fun c -> Int64Set.add (AB.c2id m c)) s Int64Set.empty)
+      regex
 
-  let from_index_regex (m : C.char_idx) (regex : ('t, Int64.t) regex) :
-      ('t, C.t) regex =
-    map_label_in_regex (C.id2c m) regex
+  let from_index_regex (m : AB.char_idx) (regex : Int64Set.t regex) :
+      CharSet.t regex =
+    map_label_in_regex
+      (fun s ->
+        Int64Set.fold (fun c -> CharSet.add (AB.id2c m c)) s CharSet.empty)
+      regex
 
   open Core
 
@@ -151,24 +81,24 @@ module DesymFA = struct
     in
     StrMap.fold (fun op m res -> add_op op m :: res) m []
 
-  let do_normalize_desym_regex (rawreg : raw_regex) =
+  let do_normalize_desym_regex (rawreg : CharSet.t regex) =
     (* let () = Printf.printf "Desym Reg: %s\n" (layout_desym_regex goal.reg) in *)
     (* let () = *)
     (*   Printf.printf "Desym Raw Reg%s\n" (DesymFA.layout_raw_regex rawreg) *)
     (* in *)
     (* let () = Printf.printf "%s\n" (DesymFA.layout_dfa fa) in *)
-    dfa_to_reg @@ minimize @@ compile_raw_regex_to_dfa rawreg
+    dfa_to_reg @@ minimize @@ compile_regex_to_dfa rawreg
 
-  let normalize_desym_regex (rawreg : raw_regex) =
+  let normalize_desym_regex (rawreg : CharSet.t regex) =
     let rec aux rawreg =
       match rawreg with
       | Empty | Eps | MultiChar _ -> rawreg
-      | Alt (r1, r2) -> smart_alt (aux r1) (aux r2)
+      | Alt (r1, r2) -> alt (aux r1) (aux r2)
       | Comple (cs, Star (MultiChar cs')) ->
           let cs'' = CharSet.filter (fun c -> not (CharSet.mem c cs')) cs in
-          smart_star (MultiChar cs'')
+          star (MultiChar cs'')
       | Inters _ | Comple _ -> do_normalize_desym_regex rawreg
-      | Seq l -> smart_seq (List.map aux l)
+      | Seq l -> seq (List.map aux l)
       | Star r -> Star (do_normalize_desym_regex r)
     in
     aux rawreg
@@ -176,28 +106,8 @@ end
 
 open Prop
 
-module SeventLabel = struct
-  type t = Nt.t sevent
-
-  let compare = compare_sevent (fun _ _ -> 0)
-  let layout = layout_se
-  (* let delimit_cotexnt_char = delimit_cotexnt_se *)
-end
-
-(* module DRegexLabel = struct *)
-(*   type t = (Nt.t, DesymLabel.t) regex *)
-
-(*   let compare = compare_regex (fun _ _ -> 0) DesymLabel.compare *)
-(*   let layout = layout_desym_regex *)
-(*   let delimit_cotexnt_char = _die_with [%here] "never" *)
-(* end *)
-
-(* module DRegexFA = struct *)
-(*   include MakeAA (DRegexLabel) *)
-(* end *)
-
 module SFA = struct
-  include MakeAA (SeventLabel)
+  include MakeAA (SymLabel)
   open Zdatatype
 
   let raw_regex_to_regex regex =
@@ -216,7 +126,7 @@ module SFA = struct
     aux regex
 
   let omit_layout_raw_regex regex =
-    To_regex.layout_symbolic_regex @@ raw_regex_to_regex regex
+    layout_symbolic_regex @@ raw_regex_to_regex regex
 
   let unionify_sevent (dfa : dfa) =
     let ss_next = dfa_next_to_ss_next dfa in
@@ -280,14 +190,3 @@ let symbolic_dfa_to_event_name_dfa (dfa : SFA.dfa) =
     { start = StateSet.singleton dfa.start; finals = dfa.finals; next }
   in
   normalize_dfa @@ determinize nfa
-
-module RegexTypecheck = struct
-  include Normal_sevent_typing
-  include Normal_regex_typing
-end
-
-include RegexTypecheck
-
-(* let bi_symbolic_regex_check = Normal_regex_typing.bi_symbolic_regex_check *)
-(* let bi_str_regex_check = Normal_regex_typing.bi_str_regex_check *)
-(* let mk_regex_ctx = Normal_regex_typing.mk_regex_ctx *)

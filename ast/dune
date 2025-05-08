@@ -1,0 +1,15 @@
+(library
+ (name ast)
+ (public_name AutomataLibrary.ast)
+ (wrapped true)
+ (modules
+   parseTree
+   mapf
+   fv
+   subst
+   astHelper
+   ast
+ )
+ (preprocess (pps ppx_here ppx_optcomp ppx_compare ppx_sexp_conv ppx_inline_test ppx_assert ppx_deriving.show ppx_deriving.eq ppx_deriving.ord))
+ (libraries zutils core yojson dolog ocolor ppx_here)
+)

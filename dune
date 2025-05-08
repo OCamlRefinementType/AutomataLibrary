@@ -5,5 +5,5 @@
  (modules
    AutomataLibrary
  )
- (libraries fa qcFa )
+ (libraries sfa qcFa )
 )

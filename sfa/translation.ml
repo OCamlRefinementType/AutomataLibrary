@@ -1,14 +1,15 @@
 open Zutils
-open Regex
-open BasicFa
+open Language
+open Common
+open ExtendFa
 
-module MakeAutomataRegex (AB : ALPHABET) = struct
-  include MakeBasicAutomata (AB)
+module MakeSFARegex (AB : ALPHABET) = struct
+  include MakeExtendAutomata (AB)
   include MakeRegex (AB)
   open AB
   open Zdatatype
   module EpsC = MakeEpsC (C)
-  module EpsFA = MakeBasicAutomata (MakeAlphabet (EpsC))
+  module EpsFA = MakeExtendAutomata (MakeAlphabet (EpsC))
 
   let force_eps_nfa (nfa : nfa) : EpsFA.nfa =
     {
@@ -19,25 +20,6 @@ module MakeAutomataRegex (AB : ALPHABET) = struct
           (fun (s, c, d) m -> EpsFA.nfa_next_insert s (EpsC.CC c) d m)
           nfa StateMap.empty;
     }
-
-  (** Build an NFA by reversing a DFA, inverting transition arrows,
-    turning finals states into start states, and the start state into
-    the final state *)
-  let reverse (dfa : dfa) : nfa =
-    let next =
-      dfa_fold_transitions
-        (fun (s, c, t) -> nfa_next_insert t c s)
-        dfa StateMap.empty
-    in
-    { start = dfa.finals; finals = StateSet.singleton dfa.start; next }
-
-  (** Available transitions from a set of states *)
-  let nfa_transitions states (nfa : nfa) =
-    StateSet.fold
-      (fun s m ->
-        let m' = nfa.next #-> s in
-        nfa_union_charmap m m')
-      states CharMap.empty
 
   (** Available transitions from a set of states *)
   let eps_nfa_transitions states (nfa : EpsFA.nfa) =
@@ -50,7 +32,7 @@ module MakeAutomataRegex (AB : ALPHABET) = struct
           | Some _ -> visit rest trans
           | None ->
               let () = Hashtbl.add tab s () in
-              let m = EpsFA.(nfa.next #-> s) in
+              let m = EpsFA.(nfa.next#->s) in
               let rest', m =
                 EpsFA.CharMap.fold
                   (fun c s' (rest', m) ->
@@ -138,14 +120,13 @@ module MakeAutomataRegex (AB : ALPHABET) = struct
       in
       normalize_dfa { start; finals; next = trans }
 
-  (** Brzozowski's DFA minimization algorithm:
-    reverse DFA to build an NFA and determinize, then do the same again *)
-  let minimize g = determinize (reverse (determinize (reverse g)))
+  (** Brzozowski's DFA minimization algorithm: reverse DFA to build an NFA and
+      determinize, then do the same again *)
+  let minimize g =
+    let g = dfa_compact g in
+    determinize (reverse (determinize (reverse g)))
 
   (** Complement *)
-
-  (* let complete_dfa (ctx : CharSet.t) (dfa : dfa) = *)
-  (*   determinize @@ complete_nfa ctx @@ force_nfa dfa *)
 
   let swap_dfa (dfa : dfa) : dfa =
     let finals =
@@ -194,54 +175,11 @@ module MakeAutomataRegex (AB : ALPHABET) = struct
   let union_dfa (dfa1 : dfa) (dfa2 : dfa) : dfa =
     minimize @@ determinize @@ union_nfa (force_nfa dfa1) (force_nfa dfa2)
 
-  let intersect_dfa (dfa1 : dfa) (dfa2 : dfa) : dfa =
-    let dfa1 = normalize_dfa dfa1 in
-    let dfa2 = normalize_dfa dfa2 in
-    let num2 = num_states_dfa dfa2 in
-    let mk_p (n1 : state) (n2 : state) = Int.add n2 @@ Int.mul num2 n1 in
-    let fst_p p = Int.div p num2 in
-    let snd_p p = Int.rem p num2 in
-    let seen = Hashtbl.create 1000 in
-    let tbl = ref StateMap.empty in
-    let update_tbl (s, c, d) =
-      tbl :=
-        StateMap.update s
-          (function
-            | None -> Some (CharMap.singleton c d)
-            | Some charmap -> Some (CharMap.add c d charmap))
-          !tbl
-    in
-    let rec visit state =
-      if not (Hashtbl.mem seen state) then
-        let () = Hashtbl.add seen state () in
-        let charmap1 = dfa1.next #-> (fst_p state) in
-        let charmap2 = dfa2.next #-> (snd_p state) in
-        CharMap.iter
-          (fun c d1 ->
-            match CharMap.find_opt c charmap2 with
-            | None -> ()
-            | Some d2 ->
-                let d = mk_p d1 d2 in
-                update_tbl (state, c, d);
-                visit d)
-          charmap1
-    in
-    let start = mk_p dfa1.start dfa2.start in
-    let () = visit start in
-    let finals =
-      StateSet.fold
-        (fun s1 ->
-          StateSet.fold (fun s2 -> StateSet.add (mk_p s1 s2)) dfa2.finals)
-        dfa1.finals StateSet.empty
-    in
-    let res = { start; finals; next = !tbl } in
-    minimize res
-
   let intersect_nfa (nfa1 : nfa) (nfa2 : nfa) : nfa =
-    force_nfa @@ intersect_dfa (determinize nfa1) (determinize nfa2)
+    force_nfa @@ minimize @@ intersect_dfa (determinize nfa1) (determinize nfa2)
 
   let intersect_eps_nfa (nfa1 : EpsFA.nfa) (nfa2 : EpsFA.nfa) : EpsFA.nfa =
-    force_eps_nfa @@ force_nfa
+    force_eps_nfa @@ force_nfa @@ minimize
     @@ intersect_dfa (eps_determinize nfa1) (eps_determinize nfa2)
 
   let concat_eps_nfa (nfa1 : EpsFA.nfa) (nfa2 : EpsFA.nfa) : EpsFA.nfa =
@@ -385,44 +323,16 @@ module MakeAutomataRegex (AB : ALPHABET) = struct
           | None -> Some eps_lit_eps_nfa
           | Some r -> Some (kleene_eps_nfa r))
     in
-    (* let () = Printf.printf "Compile %s to\n" (layout_regex r) in *)
-    (* let () = *)
-    (*   Printf.printf "%s\n" *)
-    (*     (match res with *)
-    (*     | None -> "{}" *)
-    (*     | Some res -> layout_dfa @@ eps_determinize res) *)
-    (* in *)
     res
 
   let compile_regex_to_dfa (r : CharSet.t regex) : dfa =
+    minimize
+    @@
     match compile_regex_to_eps_nfa r with
     | None -> emp_lit_dfa
     | Some r -> eps_determinize r
 
   let mk_repeat (n, r) = seq (List.init n (fun _ -> r))
-
-  (* let regex_to_raw (regex : ('t, C.t) regex) : regex = *)
-  (*   (\* let regex = Regex.to_nnf regex in *\) *)
-  (*   let rec aux (regex : ('t, C.t) regex) : regex = *)
-  (*     match regex with *)
-  (*     | Extension _ | SyntaxSugar _ | RExpr _ -> failwith "die" *)
-  (*     | LandA (r1, r2) -> Inters (aux r1, aux r2) *)
-  (*     | DComplementA { atoms; body } -> Comple (CharSet.of_list atoms, aux body) *)
-  (*     | RepeatN (n, r) -> mk_repeat (n, aux r) *)
-  (*     | MultiAtomic l -> MultiChar (CharSet.of_list l) *)
-  (*     | EmptyA -> Empty *)
-  (*     | EpsilonA -> Eps *)
-  (*     | Atomic c -> MultiChar (CharSet.singleton c) *)
-  (*     | LorA (r1, r2) -> Alt (aux r1, aux r2) *)
-  (*     | SeqA rs -> Seq (List.map aux rs) *)
-  (*     | StarA r -> Star (aux r) *)
-  (*   in *)
-  (*   let res = aux regex in *)
-  (*   (\* let () = Printf.printf "\t\tregex: %s\n" (layout_regex res) in *\) *)
-  (*   res *)
-
-  (* let compile_regex_to_dfa (r : ('t, C.t) regex) : dfa = *)
-  (*   compile_regex_to_dfa @@ regex_to_raw r *)
 
   (** automata to regex *)
 
@@ -443,12 +353,6 @@ module MakeAutomataRegex (AB : ALPHABET) = struct
     | EqSeq (x, y) -> spf "%s %s" (layout_regex_lit x) (layout_regex_lit y)
     | EqOr l -> List.split_by " + " layout_regex_lit l
     | EqStar x -> spf "(%s)*" (layout_regex_lit x)
-
-  (* let smart_eq_or a b= *)
-  (*   match (a, b) with *)
-  (*   | EqEmp, _ -> b *)
-  (*   | _, EqEmp -> a *)
-  (*   | _, _ -> EqOr (a, b) *)
 
   let mk_equation s ss_next =
     let m = StateMap.filter_map (fun _ -> StateMap.find_opt s) ss_next in
@@ -475,33 +379,6 @@ module MakeAutomataRegex (AB : ALPHABET) = struct
     let () = layout_equations l in
     ()
 
-  let del_in_ss_next s ss_next =
-    let self_m =
-      match StateMap.find_opt s ss_next with
-      | None -> _die [%here]
-      | Some m -> m
-    in
-    let self_char =
-      match StateMap.find_opt s self_m with None -> Eps | Some c -> Star c
-    in
-    let smart_update s r =
-      StateMap.update s (function None -> Some r | Some r' -> Some (alt r r'))
-    in
-    let ss_next =
-      StateMap.map
-        (fun m ->
-          StateMap.fold
-            (fun s' r' m' ->
-              if s != s' then smart_update s' r' m'
-              else
-                StateMap.fold
-                  (fun s'' r'' -> smart_update s'' (seq [ r'; self_char; r'' ]))
-                  self_m m')
-            m StateMap.empty)
-        ss_next
-    in
-    ss_next
-
   let print_ss_next ss_next =
     StateMap.iter
       (fun s ->
@@ -509,44 +386,79 @@ module MakeAutomataRegex (AB : ALPHABET) = struct
             Printf.printf "%i --[%s]--> %i\n" s (layout_regex r) s'))
       ss_next
 
+  let del_in_ss_next s ss_next =
+    match StateMap.find_opt s ss_next with
+    | None -> ss_next
+    | Some self_m ->
+        let self_char =
+          match StateMap.find_opt s self_m with None -> Eps | Some c -> star c
+        in
+        let smart_update s r =
+          StateMap.update s (function
+            | None -> Some r
+            | Some r' -> Some (alt r r'))
+        in
+        let ss_next =
+          StateMap.map
+            (fun m ->
+              StateMap.fold
+                (fun s' r' m' ->
+                  if s != s' then smart_update s' r' m'
+                  else
+                    StateMap.fold
+                      (fun s'' r'' ->
+                        smart_update s'' (seq [ r'; self_char; r'' ]))
+                      self_m m')
+                m StateMap.empty)
+            ss_next
+        in
+        ss_next
+
   let dfa_to_reg (dfa : dfa) =
     let dfa = normalize_dfa dfa in
-    if StateSet.cardinal dfa.finals == 0 then Empty
-    else
-      let n = num_states_dfa dfa in
-      let ss_next = dfa_next_to_ss_next dfa in
+    (* let () = Printf.printf "%s\n" @@ layout_dfa dfa in *)
+    (* define a automata that label regex *)
+    let n = num_states_dfa dfa in
+    let ss_next = dfa_next_to_ss_next dfa in
+    let ss_next =
+      StateMap.map (StateMap.map (fun cs -> MultiChar cs)) ss_next
+    in
+    let new_start, ss_next =
+      (* if StateSet.mem dfa.start dfa.finals then *)
       let new_start = n in
-      let new_final = n + 1 in
-      let ss_next =
-        StateMap.map (StateMap.map (fun cs -> MultiChar cs)) ss_next
-      in
-      let ss_next =
-        StateMap.add new_start (StateMap.singleton dfa.start Eps) ss_next
-      in
-      let ss_next =
-        StateSet.fold
-          (fun s ->
-            StateMap.update s (function
-              | None -> Some (StateMap.singleton new_final Eps)
-              | Some m -> Some (StateMap.add new_final Eps m)))
-          dfa.finals ss_next
-      in
+      ( new_start,
+        StateMap.add new_start (StateMap.singleton dfa.start Eps) ss_next )
+      (* else (dfa.start, ss_next) *)
+    in
+    let new_final = n + 1 in
+    let ss_next =
+      StateSet.fold
+        (fun s ->
+          StateMap.update s (function
+            | None -> Some (StateMap.singleton new_final Eps)
+            | Some m -> Some (StateMap.add new_final Eps m)))
+        dfa.finals ss_next
+    in
+    (* let () = Printf.printf "Start: %i, Final: %i\n" new_start new_final in *)
+    let rec loop i ss_next =
+      (* let () = Printf.printf "Work on %i\n" i in *)
       (* let () = print_ss_next ss_next in *)
-      let rec loop i ss_next =
-        (* let () = Printf.printf "Work on %i\n" i in *)
-        (* let () = print_ss_next ss_next in *)
-        if i == n then ss_next else loop (i + 1) (del_in_ss_next i ss_next)
-      in
-      let ss_next = loop 0 ss_next in
-      let res =
-        match StateMap.find_opt new_start ss_next with
-        | None -> _die [%here]
-        | Some m -> (
-            match StateMap.find_opt new_final m with
-            | None -> _die [%here]
-            | Some r -> r)
-      in
-      res
+      (* if i == new_start then loop (i + 1) ss_next *)
+      (* else *)
+      if i == n then ss_next else loop (i + 1) (del_in_ss_next i ss_next)
+    in
+    let ss_next = loop 0 ss_next in
+    let res =
+      match StateMap.find_opt new_start ss_next with
+      | None -> _die [%here]
+      | Some m -> (
+          match StateMap.find_opt new_final m with None -> Empty | Some r -> r)
+    in
+    res
+
+  let dfa_to_reg (dfa : dfa) =
+    let dfa = normalize_dfa dfa in
+    if StateSet.cardinal dfa.finals == 0 then Empty else dfa_to_reg dfa
 
   let regex_to_union_normal_form f (regex : CharSet.t regex) =
     let rec aux regex =
@@ -587,16 +499,16 @@ module MakeAutomataRegex (AB : ALPHABET) = struct
 
   let is_empty_regex = function Empty -> true | _ -> false
 
-  let raw_reg_map f reg =
-    let rec aux = function
-      | Empty -> Empty
-      | Eps -> Eps
-      | MultiChar cs -> MultiChar (f cs)
-      | Alt (r1, r2) -> Alt (aux r1, aux r2)
-      | Inters (r1, r2) -> Inters (aux r1, aux r2)
-      | Comple (cs, r2) -> Comple (f cs, aux r2)
-      | Seq rs -> Seq (List.map aux rs)
-      | Star r -> Star (aux r)
-    in
-    aux reg
+  (* let raw_reg_map f reg = *)
+  (*   let rec aux = function *)
+  (*     | Empty -> Empty *)
+  (*     | Eps -> Eps *)
+  (*     | MultiChar cs -> MultiChar (f cs) *)
+  (*     | Alt (r1, r2) -> Alt (aux r1, aux r2) *)
+  (*     | Inters (r1, r2) -> Inters (aux r1, aux r2) *)
+  (*     | Comple (cs, r2) -> Comple (f cs, aux r2) *)
+  (*     | Seq rs -> Seq (List.map aux rs) *)
+  (*     | Star r -> Star (aux r) *)
+  (*   in *)
+  (*   aux reg *)
 end
