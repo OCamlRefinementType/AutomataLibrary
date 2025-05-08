@@ -1,9 +1,10 @@
 open Zutils
 open Translation
-open Visualize
+open Language
 open Backend
+include Visualize
 include BasicFa
-include Regex
+include Common
 
 module MakeAA (C : CHARAC) = struct
   module AB = MakeAlphabet (C)
@@ -20,14 +21,14 @@ module MakeAA (C : CHARAC) = struct
 
   let to_index_regex (m : AB.char_idx) (regex : CharSet.t regex) :
       Int64Set.t regex =
-    map_label_in_regex
+    map_regex
       (fun s ->
         CharSet.fold (fun c -> Int64Set.add (AB.c2id m c)) s Int64Set.empty)
       regex
 
   let from_index_regex (m : AB.char_idx) (regex : Int64Set.t regex) :
       CharSet.t regex =
-    map_label_in_regex
+    map_regex
       (fun s ->
         Int64Set.fold (fun c -> CharSet.add (AB.id2c m c)) s CharSet.empty)
       regex
@@ -96,36 +97,15 @@ module DesymFA = struct
     aux rawreg
 end
 
-open Prop
-
 module SFA = struct
   include MakeAA (SymLabel)
-  open Zdatatype
-
-  let rename_sevent event_ctx (dfa : dfa) =
-    let f = function
-      | { op; vs; phi } ->
-          let vs' =
-            match StrMap.find_opt event_ctx op with
-            | Some (Nt.Ty_record l) -> l
-            | None -> _die_with [%here] (spf "die: None on %s" op)
-            | Some ty -> _die_with [%here] (spf "die: %s" (Nt.layout ty))
-          in
-          let phi' =
-            List.fold_right
-              (fun (v, v') -> subst_prop_instance v.x (AVar v'))
-              (List.combine vs vs') phi
-          in
-          { op; vs = vs'; phi = phi' }
-    in
-    dfa_map_c f dfa
 end
 
 let symbolic_dfa_to_event_name_dfa (dfa : SFA.dfa) =
   let open StrAutomata in
   let next =
     SFA.dfa_fold_transitions
-      (fun (st, ch, dest) -> nfa_next_insert st (_get_sevent_name ch) dest)
+      (fun (st, ch, dest) -> nfa_next_insert st ch.op dest)
       dfa StateMap.empty
   in
   let nfa : nfa =

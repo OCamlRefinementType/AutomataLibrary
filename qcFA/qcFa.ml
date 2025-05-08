@@ -1,4 +1,5 @@
 open Gen
+open Language
 open Sfa
 
 (* open Zutils *)
@@ -313,7 +314,9 @@ open SFA
 let _do_test r =
   let fa = compile_regex_to_dfa r in
   let r' = dfa_to_reg fa in
-  let fa = dfa_realize (fun { phi; _ } -> Prover.check_sat_bool phi) fa in
+  let fa =
+    dfa_realize (fun { phi; _ } -> Prover.check_sat_bool (None, phi)) fa
+  in
   (* let () = Printf.printf "fa:\n%s\n\n" (layout_dfa fa) in *)
   let fa = normalize_dfa fa in
   (* let () = Printf.printf "fa:\n%s\n\n" (layout_dfa fa) in *)

@@ -1,6 +1,7 @@
 open Zutils
 open Zdatatype
-open Regex
+open Language
+open Common
 
 module type FINITE_AUTOMATA = sig
   include ALPHABET
@@ -49,7 +50,7 @@ module MakeBasicAutomata (AB : ALPHABET) = struct
   let ( #-> ) = _get_next
 
   let nfa_find_states sym (nfa : nfa) m =
-    try CharMap.find sym nfa.next #-> m with Not_found -> StateSet.empty
+    try CharMap.find sym nfa.next#->m with Not_found -> StateSet.empty
 
   let _iter_to_fold (type a b c) (iter : (c -> unit) -> a -> unit) :
       (c -> b -> b) -> a -> b -> b =
@@ -64,7 +65,7 @@ module MakeBasicAutomata (AB : ALPHABET) = struct
       if not (Hashtbl.mem seen state) then (
         f state;
         Hashtbl.add seen state ();
-        CharMap.iter (fun _ -> visit) nfa.next #-> state)
+        CharMap.iter (fun _ -> visit) nfa.next#->state)
     and visit states = StateSet.iter apply states in
     visit nfa.start
 
@@ -74,7 +75,7 @@ module MakeBasicAutomata (AB : ALPHABET) = struct
       if not (Hashtbl.mem seen state) then (
         f state;
         Hashtbl.add seen state ();
-        CharMap.iter (fun _ -> apply) dfa.next #-> state)
+        CharMap.iter (fun _ -> apply) dfa.next#->state)
     in
     apply dfa.start
 
@@ -84,14 +85,13 @@ module MakeBasicAutomata (AB : ALPHABET) = struct
       (fun s ->
         CharMap.iter
           (fun (c : C.t) -> StateSet.iter (fun (dst : state) -> f (s, c, dst)))
-          nfa.next #-> s)
+          nfa.next#->s)
       nfa
 
   let dfa_iter_transitions (f : state * C.t * state -> unit) (dfa : dfa) : unit
       =
     dfa_iter_states
-      (fun s ->
-        CharMap.iter (fun (c : C.t) dst -> f (s, c, dst)) dfa.next #-> s)
+      (fun s -> CharMap.iter (fun (c : C.t) dst -> f (s, c, dst)) dfa.next#->s)
       dfa
 
   let nfa_fold_states (type a) : (state -> a -> a) -> nfa -> a -> a =
@@ -358,7 +358,7 @@ module MakeBasicAutomata (AB : ALPHABET) = struct
     let rec step cur = function
       | [] -> StateSet.mem cur dfa.finals
       | c :: cs -> (
-          match CharMap.find_opt c dfa.next #-> cur with
+          match CharMap.find_opt c dfa.next#->cur with
           | None -> false
           | Some s' -> step s' cs)
     in
@@ -386,9 +386,9 @@ module MakeBasicAutomata (AB : ALPHABET) = struct
         StateMap.fold (fun d -> CharSet.fold (fun c -> dfa_next_insert s c d)))
       ss_next StateMap.empty
 
-  (** Build an NFA by reversing a DFA, inverting transition arrows,
-    turning finals states into start states, and the start state into
-    the final state *)
+  (** Build an NFA by reversing a DFA, inverting transition arrows, turning
+      finals states into start states, and the start state into the final state
+  *)
   let reverse (dfa : dfa) : nfa =
     let next =
       dfa_fold_transitions
@@ -401,7 +401,7 @@ module MakeBasicAutomata (AB : ALPHABET) = struct
   let nfa_transitions states (nfa : nfa) =
     StateSet.fold
       (fun s m ->
-        let m' = nfa.next #-> s in
+        let m' = nfa.next#->s in
         nfa_union_charmap m m')
       states CharMap.empty
 end

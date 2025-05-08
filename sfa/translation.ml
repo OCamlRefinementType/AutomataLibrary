@@ -1,5 +1,6 @@
 open Zutils
-open Regex
+open Language
+open Common
 open ExtendFa
 
 module MakeSFARegex (AB : ALPHABET) = struct
@@ -31,7 +32,7 @@ module MakeSFARegex (AB : ALPHABET) = struct
           | Some _ -> visit rest trans
           | None ->
               let () = Hashtbl.add tab s () in
-              let m = EpsFA.(nfa.next #-> s) in
+              let m = EpsFA.(nfa.next#->s) in
               let rest', m =
                 EpsFA.CharMap.fold
                   (fun c s' (rest', m) ->
@@ -119,8 +120,8 @@ module MakeSFARegex (AB : ALPHABET) = struct
       in
       normalize_dfa { start; finals; next = trans }
 
-  (** Brzozowski's DFA minimization algorithm:
-    reverse DFA to build an NFA and determinize, then do the same again *)
+  (** Brzozowski's DFA minimization algorithm: reverse DFA to build an NFA and
+      determinize, then do the same again *)
   let minimize g =
     let g = dfa_compact g in
     determinize (reverse (determinize (reverse g)))
@@ -498,16 +499,16 @@ module MakeSFARegex (AB : ALPHABET) = struct
 
   let is_empty_regex = function Empty -> true | _ -> false
 
-  let raw_reg_map f reg =
-    let rec aux = function
-      | Empty -> Empty
-      | Eps -> Eps
-      | MultiChar cs -> MultiChar (f cs)
-      | Alt (r1, r2) -> Alt (aux r1, aux r2)
-      | Inters (r1, r2) -> Inters (aux r1, aux r2)
-      | Comple (cs, r2) -> Comple (f cs, aux r2)
-      | Seq rs -> Seq (List.map aux rs)
-      | Star r -> Star (aux r)
-    in
-    aux reg
+  (* let raw_reg_map f reg = *)
+  (*   let rec aux = function *)
+  (*     | Empty -> Empty *)
+  (*     | Eps -> Eps *)
+  (*     | MultiChar cs -> MultiChar (f cs) *)
+  (*     | Alt (r1, r2) -> Alt (aux r1, aux r2) *)
+  (*     | Inters (r1, r2) -> Inters (aux r1, aux r2) *)
+  (*     | Comple (cs, r2) -> Comple (f cs, aux r2) *)
+  (*     | Seq rs -> Seq (List.map aux rs) *)
+  (*     | Star r -> Star (aux r) *)
+  (*   in *)
+  (*   aux reg *)
 end

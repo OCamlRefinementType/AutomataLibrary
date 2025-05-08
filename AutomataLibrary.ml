@@ -1,3 +1,4 @@
+include Language
 include Sfa
 module QcFa = QcFa
 

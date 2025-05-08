@@ -1,5 +1,6 @@
 open Zutils
-open Regex
+open Language
+open Common
 open BasicFa
 
 module MakeExtendAutomata (AB : ALPHABET) = struct
@@ -52,7 +53,7 @@ module MakeExtendAutomata (AB : ALPHABET) = struct
       nfa_iter_states
         (fun state ->
           let () = update_max state in
-          let m = nfa.next #-> state in
+          let m = nfa.next#->state in
           let m' = CharSet.of_seq @@ fst @@ Seq.split @@ CharMap.to_seq m in
           let ctx' = AB.subtract_set ctx m' in
           (* let () = *)
@@ -105,7 +106,7 @@ module MakeExtendAutomata (AB : ALPHABET) = struct
       dfa_iter_states
         (fun state ->
           let () = update_max state in
-          let m = dfa.next #-> state in
+          let m = dfa.next#->state in
           let m' = CharSet.of_seq @@ fst @@ Seq.split @@ CharMap.to_seq m in
           let ctx' = AB.subtract_set ctx m' in
           (* let () = *)
@@ -157,8 +158,8 @@ module MakeExtendAutomata (AB : ALPHABET) = struct
     let rec visit state =
       if not (Hashtbl.mem seen state) then
         let () = Hashtbl.add seen state () in
-        let charmap1 = dfa1.next #-> (fst_p state) in
-        let charmap2 = dfa2.next #-> (snd_p state) in
+        let charmap1 = dfa1.next#->(fst_p state) in
+        let charmap2 = dfa2.next#->(snd_p state) in
         CharMap.iter
           (fun c1 d1 ->
             CharMap.iter

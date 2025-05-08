@@ -1,16 +1,16 @@
+open Language
 open Sfa
 open Zutils
 open SFA
 open QCheck.Gen
 open Prop
 
-let tv = "v" #: Nt.Ty_int
+let tv = "v"#:Nt.int_ty
 
 let mk_lt l1 l2 =
   (AAppOp
-     ( "<" #: (Nt.construct_arr_tp ([ Nt.Ty_int; Nt.Ty_int ], Nt.Ty_bool)),
-       [ l1 #: Nt.Ty_int; l2 #: Nt.Ty_int ] ))
-  #: Nt.Ty_bool
+     ( "<"#:(Nt.construct_arr_tp ([ Nt.int_ty; Nt.int_ty ], Nt.bool_ty)),
+       [ l1#:Nt.int_ty; l2#:Nt.int_ty ] ))#:Nt.bool_ty
 
 let tv_lt n = Lit (mk_lt (AVar tv) (AC (I n)))
 let tv_gt n = Lit (mk_lt (AC (I n)) (AVar tv))
