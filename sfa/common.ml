@@ -1,5 +1,5 @@
 open Zutils
-open Language
+open RegexLang
 
 type state = int
 

@@ -11,5 +11,5 @@
    sfa
  )
  (preprocess (pps ppx_here ppx_optcomp ppx_compare ppx_sexp_conv ppx_inline_test ppx_assert ppx_deriving.show ppx_deriving.eq ppx_deriving.ord))
- (libraries zutils core core_unix yojson dolog ocolor ppx_here language backend)
+ (libraries zutils core core_unix yojson dolog ocolor ppx_here regexLang backend)
 )

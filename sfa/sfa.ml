@@ -1,7 +1,7 @@
 open Zutils
-open Translation
-open Language
-open Backend
+include Translation
+include RegexLang
+include Backend
 include Visualize
 include BasicFa
 include Common

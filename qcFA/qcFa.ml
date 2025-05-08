@@ -1,5 +1,4 @@
 open Gen
-open Language
 open Sfa
 
 (* open Zutils *)

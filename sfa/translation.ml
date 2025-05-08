@@ -1,5 +1,5 @@
 open Zutils
-open Language
+open RegexLang
 open Common
 open ExtendFa
 

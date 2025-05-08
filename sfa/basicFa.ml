@@ -1,6 +1,6 @@
 open Zutils
 open Zdatatype
-open Language
+open RegexLang
 open Common
 
 module type FINITE_AUTOMATA = sig
