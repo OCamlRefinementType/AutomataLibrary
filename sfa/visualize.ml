@@ -9,9 +9,9 @@ module MakeAutomataDot (FA : FINITE_AUTOMATA) = struct
   let edge_name s =
     match CharSet.cardinal s with
     | 0 -> "{}"
-    | 1 -> C.layout (CharSet.choose s)
+    | 1 -> C.display (CharSet.choose s)
     | _ ->
-        "{" ^ String.concat " " (List.map C.layout (CharSet.elements s)) ^ "}"
+        "{" ^ String.concat " " (List.map C.display (CharSet.elements s)) ^ "}"
 
   let digraph_of_nfa : nfa -> Digraph.t =
    fun (nfa : nfa) ->

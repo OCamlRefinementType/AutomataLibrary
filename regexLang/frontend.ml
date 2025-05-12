@@ -8,8 +8,8 @@ open RegexAst
 open Sugar
 open Prop
 
-(* let tpEvent str = spf "⟨%s⟩" str *)
-let tpEvent str = spf "[%s]" str
+let tpEvent str = spf "⟨%s⟩" str
+let display_tpEvent str = spf "[%s]" str
 
 let layout_sevent { op; phi; vs } =
   if is_true phi then tpEvent op
@@ -20,6 +20,16 @@ let layout_sevent { op; phi; vs } =
       else ""
     in
     tpEvent @@ spf "%s %s| %s" op fds (layout_prop phi)
+
+let display_sevent { op; phi; vs } =
+  if is_true phi then op
+  else
+    let fds =
+      if Myconfig.get_bool_option "show_sevent_fds" then
+        List.split_by " " (fun x -> x.x) vs ^ " "
+      else ""
+    in
+    display_tpEvent @@ spf "%s %s| %s" op fds (layout_propRaw phi)
 
 let get_opopt expr =
   match string_to_op_opt (get_denote expr) with

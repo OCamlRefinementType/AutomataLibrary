@@ -5,6 +5,7 @@ module type CHARAC = sig
   include Map.OrderedType
 
   val layout : t -> string
+  val display : t -> string
   val char_union : t -> t -> t option
   val char_inter : t -> t -> t option
   val char_subtract : t -> t -> t option
@@ -16,6 +17,7 @@ module CharC = struct
   include Char
 
   let layout x = spf "%c" x
+  let display = layout
   let get_name = layout
   let char_union c1 c2 = if Char.equal c1 c2 then Some c1 else None
   let char_inter = char_union
@@ -26,6 +28,7 @@ module StringC = struct
   include String
 
   let layout x = x
+  let display = layout
   let get_name = layout
   let char_union c1 c2 = if String.equal c1 c2 then Some c1 else None
   let char_inter = char_union
@@ -36,6 +39,7 @@ module Int64C = struct
   include Int64
 
   let layout = to_string
+  let display = layout
   let get_name = layout
   let char_union c1 c2 = if Int64.equal c1 c2 then Some c1 else None
   let char_inter = char_union
@@ -46,6 +50,7 @@ module DesymLabel = struct
   type t = string * int [@@deriving eq, ord]
 
   let layout (op, id) = op ^ ":" ^ string_of_int id
+  let display = layout
   let get_name = layout
   let char_union c1 c2 = if equal c1 c2 then Some c1 else None
   let char_inter = char_union
@@ -56,6 +61,7 @@ module SymLabel = struct
   type t = Nt.nt sevent [@@deriving eq, ord]
 
   let layout se = Frontend.layout_sevent se
+  let display se = Frontend.display_sevent se
   let get_name se = se.op
 
   let char_union se1 se2 =

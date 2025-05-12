@@ -6,6 +6,6 @@
 (executable
  (name main)
  (modules main)
- (libraries AutomataLibrary)
+ (libraries core core_unix.command_unix AutomataLibrary)
  (preprocess
   (pps ppx_jane)))

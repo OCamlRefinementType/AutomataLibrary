@@ -19,6 +19,7 @@ module MakeEpsC (C : CHARAC) = struct
 
   let _nop = "_______eps"
   let layout = function CEps -> "eps" | CC c -> C.layout c
+  let display = function CEps -> "eps" | CC c -> C.display c
   let get_name = function CEps -> _nop | CC c -> C.get_name c
 
   let char_union se1 se2 =
