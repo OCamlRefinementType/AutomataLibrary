@@ -8,7 +8,8 @@ open RegexAst
 open Sugar
 open Prop
 
-let tpEvent str = spf "⟨%s⟩" str
+(* let tpEvent str = spf "⟨%s⟩" str *)
+let tpEvent str = spf "[%s]" str
 
 let layout_sevent { op; phi; vs } =
   if is_true phi then tpEvent op
