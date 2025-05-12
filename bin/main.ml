@@ -10,10 +10,10 @@ let regular_file =
       | `Unknown -> failwith "Could not determine if this was a regular file")
 
 let inv =
-  "(starA (not (Req (id == lc)));\n\
+  "(starA (anyA - Req (id == lc));\n\
   \   Req (id == lc);\n\
-  \   starA (not (Req (id == lc))))\n\
-  \  || starA (not (Req (id == lc)))"
+  \   starA (anyA - Req (id == lc)))\n\
+  \  || starA (anyA - Req (id == lc))"
 
 let raw_to_ctx l =
   Typectx.ctx_from_list

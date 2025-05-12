@@ -8,9 +8,7 @@ include Common
 
 module MakeAA (C : CHARAC) = struct
   module AB = MakeAlphabet (C)
-  module Tmp = MakeSFARegex (AB)
-  include MakeAutomataDot (Tmp)
-  include Tmp
+  include MakeSFARegex (AB)
 
   let _tmp_dot_path = ".tmp.dot"
 
@@ -32,24 +30,6 @@ module MakeAA (C : CHARAC) = struct
       (fun s ->
         Int64Set.fold (fun c -> CharSet.add (AB.id2c m c)) s CharSet.empty)
       regex
-
-  open Core
-
-  let save_dfa_as_digraph sfa filename =
-    Format.fprintf
-      (Format.formatter_of_out_channel @@ Out_channel.create filename)
-      "%a@." format_digraph
-      (digraph_of_nfa (force_nfa sfa))
-
-  let display_dfa sfa =
-    let () = save_dfa_as_digraph sfa _tmp_dot_path in
-    let () = Out_channel.(flush stdout) in
-    (* let () = UnixLabels.sleep 1 in *)
-    (* let ch = Core_unix.open_process_out "ls" in *)
-    (* Core_unix.(close_process_out ch) *)
-    Core_unix.(
-      close_process_out @@ open_process_out
-      @@ spf "cat %s | dot -Tpng | imgcat" _tmp_dot_path)
 end
 
 module CharAutomata = MakeAA (CharC)

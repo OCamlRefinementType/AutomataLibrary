@@ -2,9 +2,12 @@ open Zutils
 open RegexLang
 open Common
 open BasicFa
+open Visualize
 
 module MakeExtendAutomata (AB : ALPHABET) = struct
-  include MakeBasicAutomata (AB)
+  module Tmp = MakeBasicAutomata (AB)
+  include MakeAutomataDot (Tmp)
+  include Tmp
 
   (** realize *)
   let compact_ss (ss_next : CharSet.t StateMap.t StateMap.t) =
@@ -183,4 +186,32 @@ module MakeExtendAutomata (AB : ALPHABET) = struct
     in
     let res = { start; finals; next = !tbl } in
     res
+
+  open Core
+  open Backend
+
+  let _tmp_dot_path = ".tmp.dot"
+
+  let save_nfa_as_digraph sfa filename =
+    Format.fprintf
+      (Format.formatter_of_out_channel @@ Out_channel.create filename)
+      "%a@." format_digraph (digraph_of_nfa sfa)
+
+  let save_dfa_as_digraph sfa filename =
+    save_nfa_as_digraph (force_nfa sfa) filename
+
+  let display_tmp_file () =
+    Core_unix.(
+      close_process_out @@ open_process_out
+      @@ spf "cat %s | dot -Tpng | imgcat" _tmp_dot_path)
+
+  let display_nfa sfa =
+    save_nfa_as_digraph sfa _tmp_dot_path;
+    Out_channel.(flush stdout);
+    display_tmp_file ()
+
+  let display_dfa sfa =
+    save_dfa_as_digraph sfa _tmp_dot_path;
+    Out_channel.(flush stdout);
+    display_tmp_file ()
 end

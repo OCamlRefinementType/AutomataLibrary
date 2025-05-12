@@ -323,6 +323,12 @@ module MakeSFARegex (AB : ALPHABET) = struct
           | None -> Some eps_lit_eps_nfa
           | Some r -> Some (kleene_eps_nfa r))
     in
+    (* let () = Pp.printf "regex: %s\n" (layout_regex r) in *)
+    (* let _ = *)
+    (*   match res with *)
+    (*   | None -> display_dfa emp_lit_dfa *)
+    (*   | Some nfa -> EpsFA.display_nfa nfa *)
+    (* in *)
     res
 
   let compile_regex_to_dfa (r : CharSet.t regex) : dfa =
