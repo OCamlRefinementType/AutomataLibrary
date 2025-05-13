@@ -8,21 +8,25 @@ module MakeRegex (AB : ALPHABET) = struct
 
   type reg = CharSet.t regex
 
-  let alt a b =
+  let rec alt a b =
     match (a, b) with
     | Empty, _ -> b
     | _, Empty -> a
     | MultiChar c1, MultiChar c2 -> MultiChar (CharSet.union c1 c2)
+    | Star a, Star b -> Star (alt a b)
     | _, _ -> Alt (a, b)
 
   let alt_list l = List.left_reduce [%here] alt (Empty :: l)
 
-  let inter a b =
+  let rec inter a b =
     match (a, b) with
     | Empty, _ -> Empty
     | _, Empty -> Empty
     | MultiChar c1, MultiChar c2 -> MultiChar (CharSet.inter c1 c2)
+    | Star a, Star b -> Star (inter a b)
     | _, _ -> Inters (a, b)
+
+  let inter_list l = List.left_reduce [%here] inter l
 
   let star r =
     match r with Empty -> Empty | Eps -> Eps | Star r -> Star r | r -> Star r
