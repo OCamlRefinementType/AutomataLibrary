@@ -7,9 +7,6 @@ open Typectx
 open Zdatatype
 
 type t = Nt.t
-
-let _log = Myconfig._log_preprocess
-
 type basic_typing_ctx = { event_ctx : Nt.nt ctx; ctx : Nt.nt ctx }
 
 let mk_basic_typing_ctx = { event_ctx = emp; ctx = emp }
