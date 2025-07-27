@@ -79,6 +79,12 @@ end
 
 module SFA = struct
   include MakeAA (SymLabel)
+
+  let subst_regex (_x : string) f (regex : CharSet.t regex) : CharSet.t regex =
+    map_regex (CharSet.map (subst_sevent _x f)) regex
+
+  let subst_regex_instance y z sevent =
+    subst_f_to_instance subst_regex y z sevent
 end
 
 let symbolic_dfa_to_event_name_dfa (dfa : SFA.dfa) =
