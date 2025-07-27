@@ -4,14 +4,21 @@ open Typectx
 open Sv
 open Prop
 
-(* type t = Nt.t *)
+type t = Nt.t
 
-type regex_ctx = {
-  regex_tyctx : Nt.nt Typectx.ctx;
-  tyctx : Nt.nt Typectx.ctx;
-  event_tyctx : (Nt.nt, string) typed list Typectx.ctx;
-}
-
+let constraint_sevent_type_check (ctx : t ctx) (bc : BC.bc) ({ op; vs; phi } : t sevent) =
+  match get_opt ctx op with
+  | None -> _failatwith [%here] (spf "undefined event: %s" op)
+  | Some nty ->
+    Nt.
+  
+  match se with
+  | { op; vs; phi } -> 
+      match get_opt ctx.event_tyctx op with
+      | None -> _failatwith [%here] (spf "undefined event: %s" op)
+      | Some argsty ->
+          let vs =
+            match vs with
 let bi_sevent_check ctx (sevent : Nt.t sevent) : Nt.t sevent =
   match sevent with
   | { op; vs; phi } -> (

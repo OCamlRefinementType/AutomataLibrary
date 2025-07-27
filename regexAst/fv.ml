@@ -4,9 +4,8 @@ open Prop
 open Zdatatype
 
 let fv_t_p_expr = typed_fv_lit
-
-(* let substract = List.substract (typed_eq String.equal) *)
-(* let fv_sevent { vs; phi; _ } = substract (fv_prop phi) vs *)
+let substract_fvs l1 l2 = List.substract (typed_eq String.equal) l1 l2
+let fv_sevent { vs; phi; _ } = substract_fvs (fv_prop phi) vs
 
 let fv_rich_regex (fv : 'a -> ('t, string) typed list) (regex : 'a rich_regex) =
   let rm_dup = List.slow_rm_dup (fun x y -> String.equal x.x y.x) in
