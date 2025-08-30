@@ -23,7 +23,7 @@ module MakeSFARegex (AB : ALPHABET) = struct
 
   (** Available transitions from a set of states *)
   let eps_nfa_transitions states (nfa : EpsFA.nfa) =
-    let tab = Hashtbl.create 10 in
+    let tab = Hashtbl.create 100 in
     let rec visit rest trans =
       match rest with
       | [] -> (StateSet.of_seq @@ Hashtbl.to_seq_keys tab, trans)
@@ -56,6 +56,15 @@ module MakeSFARegex (AB : ALPHABET) = struct
           !r
       in
       let rec build states (map, ts, finals) =
+        (* let () =
+          Pp.printf "ReachableSet: %s\n"
+            (List.split_by_comma
+               (fun (s, x) ->
+                 spf "[%s ]~ %i"
+                   (List.split_by_comma string_of_int (StateSet.to_list s))
+                   x)
+               (M.to_list map))
+        in *)
         let states, tsn = eps_nfa_transitions states nfa in
         match M.find states map with
         | state -> (state, map, ts, finals)
@@ -332,11 +341,25 @@ module MakeSFARegex (AB : ALPHABET) = struct
     res
 
   let compile_regex_to_dfa (r : CharSet.t regex) : dfa =
-    minimize
-    @@
-    match compile_regex_to_eps_nfa r with
+    let res = compile_regex_to_eps_nfa r in
+    match res with
     | None -> emp_lit_dfa
-    | Some r -> eps_determinize r
+    | Some r ->
+        (* let () = Pp.printf "nfa: %s\n" (EpsFA.layout_nfa r) in *)
+        let r = eps_determinize r in
+        (* let () = Pp.printf "dfa: %s\n" (layout_dfa r) in *)
+        let r = minimize r in
+        (* let () = Pp.printf "dfa: %s\n" (layout_dfa r) in *)
+        (* let () = _die [%here] in *)
+        r
+
+  let inline_test () =
+    let r = Sexplib.Sexp.load_sexp "/tmp/tmp.sexp" in
+    let r = regex_of_sexp CharSet.t_of_sexp r in
+    (* let () = Pp.printf "%s\n" (layout_regex r) in *)
+    let _ = compile_regex_to_dfa r in
+    (* let () = Pp.printf "dfa: %s\n" (layout_dfa dfa) in *)
+    true
 
   let mk_repeat (n, r) = seq (List.init n (fun _ -> r))
 

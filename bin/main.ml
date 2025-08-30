@@ -46,6 +46,10 @@ let test () =
   let res = SFA.display_dfa @@ SFA.minimize @@ SFA.compile_regex_to_dfa sfa in
   ()
 
+let inline () =
+  let _ = SFA.inline_test () in
+  ()
+
 let zero_param message f =
   let cmd =
     Command.basic ~summary:message
@@ -81,6 +85,7 @@ let commands =
     [
       (* one_param_file "test" test; *)
       zero_param "test" test;
+      zero_param "inline" inline;
       zero_param "qcheck" (fun () ->
           let b = QcFa.testcase in
           ())

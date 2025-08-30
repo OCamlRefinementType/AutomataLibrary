@@ -57,6 +57,20 @@ module Int64C = struct
   let char_subtract c1 c2 = if Int64.equal c1 c2 then None else Some c1
 end
 
+module IntC = struct
+  include Int
+  open Sexplib.Std
+
+  type t = int [@@deriving sexp]
+
+  let layout = to_string
+  let display = layout
+  let get_name = layout
+  let char_union c1 c2 = if Int.equal c1 c2 then Some c1 else None
+  let char_inter = char_union
+  let char_subtract c1 c2 = if Int.equal c1 c2 then None else Some c1
+end
+
 module DesymLabel = struct
   open Sexplib.Std
 

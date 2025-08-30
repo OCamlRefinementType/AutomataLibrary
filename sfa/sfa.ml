@@ -35,6 +35,7 @@ end
 module CharAutomata = MakeAA (CharC)
 module StrAutomata = MakeAA (StringC)
 module IdAutomata = MakeAA (Int64C)
+module IntAutomata = MakeAA (IntC)
 
 module DesymFA = struct
   include MakeAA (DesymLabel)
