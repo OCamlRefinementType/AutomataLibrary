@@ -15,7 +15,7 @@ let layout_states f s =
   List.split_by_comma f @@ List.of_seq @@ StateSet.to_seq s
 
 module MakeEpsC (C : CHARAC) = struct
-  type t = CEps | CC of C.t [@@deriving ord]
+  type t = CEps | CC of C.t [@@deriving ord, sexp]
 
   let _nop = "_______eps"
   let layout = function CEps -> "eps" | CC c -> C.layout c

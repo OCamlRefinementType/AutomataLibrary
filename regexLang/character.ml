@@ -4,6 +4,8 @@ open RegexAst
 module type CHARAC = sig
   include Map.OrderedType
 
+  val sexp_of_t : t -> Sexplib.Sexp.t
+  val t_of_sexp : Sexplib.Sexp.t -> t
   val layout : t -> string
   val display : t -> string
   val char_union : t -> t -> t option
@@ -15,6 +17,9 @@ end
 
 module CharC = struct
   include Char
+  open Sexplib.Std
+
+  type t = char [@@deriving sexp]
 
   let layout x = spf "%c" x
   let display = layout
@@ -26,6 +31,9 @@ end
 
 module StringC = struct
   include String
+  open Sexplib.Std
+
+  type t = string [@@deriving sexp]
 
   let layout x = x
   let display = layout
@@ -37,6 +45,9 @@ end
 
 module Int64C = struct
   include Int64
+  open Sexplib.Std
+
+  type t = int64 [@@deriving sexp]
 
   let layout = to_string
   let display = layout
@@ -47,7 +58,9 @@ module Int64C = struct
 end
 
 module DesymLabel = struct
-  type t = string * int [@@deriving eq, ord]
+  open Sexplib.Std
+
+  type t = string * int [@@deriving eq, ord, sexp]
 
   let layout (op, id) = op ^ ":" ^ string_of_int id
   let display = layout
@@ -58,7 +71,7 @@ module DesymLabel = struct
 end
 
 module SymLabel = struct
-  type t = Nt.nt sevent [@@deriving eq, ord]
+  type t = Nt.nt sevent [@@deriving eq, ord, sexp]
 
   let layout se = Frontend.layout_sevent se
   let display se = Frontend.display_sevent se

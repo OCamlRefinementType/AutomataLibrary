@@ -2,10 +2,17 @@ open Zutils
 open Zdatatype
 open Character
 
+module type CharSet = sig
+  include Set.S
+
+  val sexp_of_t : t -> Sexplib.Sexp.t
+  val t_of_sexp : Sexplib.Sexp.t -> t
+end
+
 module type ALPHABET = sig
   module C : CHARAC
   module CharMap : Map.S with type key = C.t
-  module CharSet : Set.S with type elt = C.t
+  module CharSet : CharSet with type elt = C.t
   include CHARAC
 
   type char_idx
@@ -22,7 +29,17 @@ end
 module MakeAlphabet (C : CHARAC) = struct
   module C = C
   module CharMap = Map.Make (C)
-  module CharSet = Set.Make (C)
+
+  module CharSet = struct
+    include Set.Make (C)
+    open Sexplib.Std
+
+    type char_list = C.t list [@@deriving sexp]
+
+    let sexp_of_t t = sexp_of_char_list (to_list t)
+    let t_of_sexp s = of_list (char_list_of_sexp s)
+  end
+
   include C
 
   type char_idx = {
