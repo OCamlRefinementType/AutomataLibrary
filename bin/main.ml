@@ -36,7 +36,7 @@ let test () =
     List.map ~f:(fun x -> mk_top_sevent [%here] x.x x.ty)
     @@ Typectx.ctx_to_list event_ctx
   in
-  let sfa = rich_regex_desugar (Ctx { atoms = ectx; body = sfa }) in
+  let sfa = rich_regex_desugar event_ctx (Ctx { atoms = ectx; body = sfa }) in
   let () = Pp.printf "@{<bold>sfa:@}\n%s\n" (layout_rich_symbolic_regex sfa) in
   let sfa = SFA.rich_regex_to_regex sfa in
   let () = Pp.printf "@{<bold>sfa:@}\n%s\n" (SFA.layout_regex sfa) in

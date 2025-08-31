@@ -20,7 +20,12 @@ let complementA regex =
 
 let omit_show_rich_regex regex = show_rich_regex (fun _ _ -> ()) regex
 
-let rich_regex_desugar regex =
+let op_to_top_sevent event_ctx op =
+  let record_type = Typectx._get_force [%here] event_ctx op in
+  let fds = Nt.as_record [%here] record_type in
+  { op; vs = fds; phi = mk_true }
+
+let rich_regex_desugar event_ctx regex =
   let force_ctx = function
     | None ->
         _failatwith [%here]
@@ -30,9 +35,7 @@ let rich_regex_desugar regex =
   let rec aux ctx regex =
     match regex with
     | CtxOp { op_names; body } ->
-        let atoms =
-          List.map (fun op -> { op; vs = []; phi = mk_true }) op_names
-        in
+        let atoms = List.map (op_to_top_sevent event_ctx) op_names in
         aux ctx (Ctx { atoms; body })
     | SetMinusA (r1, r2) ->
         let r1, r2 = map2 (aux ctx) (r1, r2) in
