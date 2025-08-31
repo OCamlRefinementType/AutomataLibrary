@@ -12,7 +12,8 @@ let tpEvent str = spf "⟨%s⟩" str
 let display_tpEvent str = spf "[%s]" str
 
 let layout_sevent { op; phi; vs } =
-  if is_true phi && Myconfig.get_bool_option "show_sevent_fds" then tpEvent op
+  if is_true phi && not (Myconfig.get_bool_option "show_sevent_fds") then
+    tpEvent op
   else
     let fds =
       if Myconfig.get_bool_option "show_sevent_fds" then
